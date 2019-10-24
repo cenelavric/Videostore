@@ -1,0 +1,53 @@
+= Videostore: Assortment of technologies including Arquillian
+:author: Cene Lavrič
+:level: Intermediate
+:technologies: CDI, JSF, JPA, EJB, JAX-RS, BV. TBD: JSF, JAX-RS
+
+[abstract]
+The `videostore` project demonstrates a Java 11 web-enabled database application using JSF, CDI, EJB, JPA, and Bean Validation. Project is coupled with JBoss/Wildfly container following organization 
+already known from https://github.com/wildfly/quickstart/. Implementation is inspired by Backend Coding Challenge from company Beenius.
+
+== Beenius Backend Coding Challenge
+
+Project is a backend application for movies and actors management, described in details in the following sections. Keep in mind that application can be used by multiple clients at the same time and all data needs to be persisted somewhere (preferred H2 database).
+
+Movies have properties as title, year, description, list of actors, some pictures, etc. (as identifier use imdbID). Service methods support basic operations:
+* list all movies,
+* list movies with pagination support,
+* search of movie,
+* CRUD operations,
+
+Actors have properties as first name, last name, born date, list of movies, etc. Service methods support basic operations:
+* list all actors,
+* list actors with pagination support,
+* CRUD operations.
+
+//*************************************************
+// Product Release content
+//*************************************************
+
+== What is it now?
+
+The `videostore` quickstart is a deployable Maven 3 project designed to demonstrate typical project elements developing with {javaVersion} on {productNameFull}.
+
+It demonstrates how to create a compliant {javaVersion} application using CDI,  EJB, JPA, and Bean Validation. It also includes a persistence unit and some sample persistence and transaction code to introduce you to database access in enterprise Java.
+
+
+== What will it be in the end?
+
+Future commits will extend this project to support JAX-RS and JSF.
+
+== Deploying the Application
+
+
+Application supports no user interaction yet. User Arquillian tests to run/debug the application.
+
+The application should be deployed to a Wildfly server; preferred is version 18. It will use integrated H2 database. Use maven profiles 'arq-remote' and 'arq-managed' for running Arquillian tests.
+
+== Access the Application
+
+The application will be running at the following URL: http://localhost:8080/videostore/.
+
+
+
+

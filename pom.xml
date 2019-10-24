@@ -1,0 +1,660 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.jboss</groupId>
+		<artifactId>jboss-parent</artifactId>
+		<version>36</version>
+	</parent>
+
+	<groupId>beenius</groupId>
+	<artifactId>videostore</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
+	<name>BeeniusVideoStore</name>
+	<description>Skill demonstration of a Beenius job applicant based on assigned task.</description>
+
+	<properties>
+
+		<!-- Migrate JavaSe from 8 to 11 -->
+		<java.version>11</java.version>
+		<maven.compiler.source>${java.version}</maven.compiler.source>
+		<maven.compiler.target>${java.version}</maven.compiler.target>
+
+		<root.dir>${project.basedir}</root.dir>
+		<jboss.home.name>${env.WILDFLY_HOME}</jboss.home.name>
+		<product.name>WildFly</product.name>
+
+		<version.wildfly.maven.plugin>2.0.0.Final</version.wildfly.maven.plugin>
+		<version.org.wildfly.checkstyle-config>1.0.8.Final</version.org.wildfly.checkstyle-config>
+
+
+		<!-- version.com.mycyla.license>3.0</version.com.mycyla.license -->
+
+		<!-- Effectively overrides parent version -->
+		<version.checkstyle.plugin>3.1.0</version.checkstyle.plugin>
+		<version.checkstyle>8.19</version.checkstyle>
+		<version.jaxws-tools-maven-plugin>1.2.3.Final</version.jaxws-tools-maven-plugin>
+
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+		<!-- WildFly version to be used by Jakarta EE 8 with Tools BOM for determining 
+			compliant dependency versions -->
+		<version.server.bom>18.0.0.Final</version.server.bom>
+		<!-- version.server.bom>17.0.1.Final</version.server.bom -->
+
+		<!-- Versions of unmanaged dependencies -->
+		<version.arquillian.angularjs.graphene>1.2.0.Beta1</version.arquillian.angularjs.graphene>
+		<version.com.nimbusds.jose.jwt>5.4</version.com.nimbusds.jose.jwt>
+		<version.deltaspike.core>1.5.1</version.deltaspike.core>
+		<version.json.path>2.0.0</version.json.path>
+		<version.org.apache.wicket>7.3.0</version.org.apache.wicket>
+		<version.hibernate4>4.2.21.Final</version.hibernate4>
+		<version.hibernate4.validator>4.3.2.Final</version.hibernate4.validator>
+		<version.org.json>20150729</version.org.json>
+		<version.org.richfaces>4.5.7.Final</version.org.richfaces>
+		<version.ro.isdc.wro4j>1.7.9</version.ro.isdc.wro4j>
+		<version.spring.framework>4.3.14.RELEASE</version.spring.framework>
+
+		<linkXRef>false</linkXRef>
+
+		<javax.activation.version>1.2.0</javax.activation.version>
+		<jaxb.api.version>2.3.0</jaxb.api.version>
+		<version.hamcrest.library>2.1</version.hamcrest.library>
+		<version.failsafe.plugin>2.22.2</version.failsafe.plugin>
+	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<!-- https://mvnrepository.com/artifact/org.wildfly.bom/wildfly-jakartaee8-with-tools -->
+			<dependency>
+				<groupId>org.wildfly.bom</groupId>
+				<artifactId>wildfly-jakartaee8-with-tools</artifactId>
+				<version>${version.server.bom}</version>
+				<!-- version>18.0.0.Final</version -->
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+		<!-- Set the name of the WAR, used as the context root when the app is 
+			deployed. -->
+		<finalName>${project.artifactId}</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+			</plugin>
+		</plugins>
+		<pluginManagement>
+			<plugins>
+
+				<plugin>
+					<groupId>org.wildfly.plugins</groupId>
+					<artifactId>wildfly-maven-plugin</artifactId>
+					<version>${version.wildfly.maven.plugin}</version>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-ejb-plugin</artifactId>
+					<version>${version.ejb.plugin}</version>
+					<configuration>
+						<!-- Tell Maven we are using EJB -->
+						<ejbVersion>3.2</ejbVersion>
+					</configuration>
+				</plugin>
+
+				<!-- Checkstyle -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-checkstyle-plugin</artifactId>
+					<version>${version.checkstyle.plugin}</version>
+					<configuration>
+
+						<!-- configLocation>wildfly-checkstyle/checkstyle.xml</configLocation> -->
+						<!-- configLocation>sun_checks.xml</configLocation> -->
+						<configLocation>google_checks.xml</configLocation>
+
+						<!-- NOTES about configLocation: -->
+						<!-- ConfigLocation provides location of rule sets -->
+						<!-- There are two effective plugins providing 3 checkstyle rule sets: 
+							org.wildfly.checkstyle:wildfly-checkstyle-config and com.puppycrawl.tools:checkstyle -->
+						<!-- Originally, wildfly-checkstyle-config provides checkstyle.xml 
+							which includes suppression filter -->
+						<!-- com.puppycrawl.tools configuration plugin is defined as parent 
+							dependency -->
+						<!-- com.puppycrawl.tools provides sun_checks.xml and google_checks.xml -->
+						<!-- Maven plugin defaults to com.puppycrawl.tools sun_checks.xml even 
+							when configLocation element is altogether omitted -->
+						<!-- com.puppycrawl.tools setting may also be easily enforced in Eclipse 
+							general Preferences-Checkstyle and corresponding project Checkstyle -->
+						<!-- I have selected com.puppycrawl.tools google_checks.xml as the 
+							most optimal for both: Maven and Eclipse checks -->
+						<!-- It is important to find a match between versions of checkstyle 
+							and configuration plugins -->
+						<!-- mvn checkstyle:checkstyle -->
+
+						<includeTestSourceDirectory>true</includeTestSourceDirectory>
+						<sourceDirectories>
+							<directory>${project.build.sourceDirectory}</directory>
+						</sourceDirectories>
+						<resourceIncludes>**/*.properties,**/*.xml</resourceIncludes>
+						<includeTestResources>true</includeTestResources>
+						<includeResources>true</includeResources>
+						<consoleOutput>true</consoleOutput>
+						<failsOnError>true</failsOnError>
+						<failOnViolation>true</failOnViolation>
+					</configuration>
+					<dependencies>
+						<dependency>
+							<groupId>org.wildfly.checkstyle</groupId>
+							<artifactId>wildfly-checkstyle-config</artifactId>
+							<version>${version.org.wildfly.checkstyle-config}</version>
+						</dependency>
+					</dependencies>
+					<executions>
+						<execution>
+							<id>check-style</id>
+							<phase>compile</phase>
+							<goals>
+								<goal>checkstyle</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											com.redhat.rcm.maven.plugin
+										</groupId>
+										<artifactId>
+											buildmetadata-maven-plugin
+										</artifactId>
+										<versionRange>
+											[1.7.0,)
+										</versionRange>
+										<goals>
+											<goal>
+												provide-buildmetadata
+											</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.commonjava.maven.plugins
+										</groupId>
+										<artifactId>
+											project-sources-maven-plugin
+										</artifactId>
+										<versionRange>
+											[0.3,)
+										</versionRange>
+										<goals>
+											<goal>archive</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.jboss.ws.plugins
+										</groupId>
+										<artifactId>
+											jaxws-tools-maven-plugin
+										</artifactId>
+										<versionRange>
+											[1.2.0.Final,)
+										</versionRange>
+										<goals>
+											<goal>wsconsume</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore />
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+	<dependencies>
+
+		<!-- First declare the APIs we depend on and need for compilation. All 
+			of them are provided by JBoss EAP -->
+
+		<!-- Import the CDI API, we use provided scope as the API is included in 
+			JBoss EAP -->
+		<dependency>
+			<groupId>jakarta.enterprise</groupId>
+			<!-- groupId>javax.enterprise</groupId -->
+			<artifactId>jakarta.enterprise.cdi-api</artifactId>
+			<!-- artifactId>cdi-api</artifactId -->
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Import Validation API, we use provided scope as the API is included 
+			in JBoss EAP -->
+		<dependency>
+			<groupId>jakarta.validation</groupId>
+			<artifactId>jakarta.validation-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Needed for running tests (you may also use TestNG) -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.hamcrest</groupId>
+					<artifactId>hamcrest-core</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- This will get hamcrest-core automatically -->
+		<dependency>
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-library</artifactId>
+			<version>${version.hamcrest.library}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Now we declare any tools needed -->
+
+		<!-- Annotation processor to generate the JPA metamodel classes for typesafe 
+			criteria queries -->
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-jpamodelgen</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Bean Validation Implementation Provides portable constraints such 
+			as @Email Hibernate Validator is shipped in JBoss EAP -->
+		<dependency>
+			<groupId>org.hibernate.validator</groupId>
+			<artifactId>hibernate-validator</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Annotation processor that raising compilation errors whenever constraint 
+			annotations are incorrectly used. -->
+		<dependency>
+			<groupId>org.hibernate.validator</groupId>
+			<artifactId>hibernate-validator-annotation-processor</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Import the JPA API, we use provided scope as the API is included in 
+			JBoss EAP -->
+		<dependency>
+			<groupId>jakarta.persistence</groupId>
+			<artifactId>jakarta.persistence-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Optional, but highly recommended -->
+		<!-- Arquillian allows you to test enterprise code such as EJBs and Transactional(JTA) 
+			JPA from JUnit/TestNG -->
+		<dependency>
+			<groupId>org.jboss.arquillian.junit</groupId>
+			<artifactId>arquillian-junit-container</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.arquillian.protocol</groupId>
+			<artifactId>arquillian-protocol-servlet</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Import the Common Annotations API (JSR-250), we use provided scope 
+			as the API is included in JBoss EAP -->
+		<dependency>
+			<groupId>org.jboss.spec.javax.annotation</groupId>
+			<artifactId>jboss-annotations-api_1.3_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Import the EJB API, we use provided scope as the API is included in 
+			JBoss EAP -->
+		<dependency>
+			<groupId>org.jboss.spec.javax.ejb</groupId>
+			<artifactId>jboss-ejb-api_3.2_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Import the JSF API, we use provided scope as the API is included in 
+			JBoss EAP -->
+		<dependency>
+			<groupId>org.jboss.spec.javax.faces</groupId>
+			<artifactId>jboss-jsf-api_2.3_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Import the JAX-RS API, we use provided scope as the API is included 
+			in JBoss EAP -->
+		<dependency>
+			<groupId>org.jboss.spec.javax.ws.rs</groupId>
+			<artifactId>jboss-jaxrs-api_2.1_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.spec.javax.xml.bind</groupId>
+			<artifactId>jboss-jaxb-api_2.3_spec</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- This supports the use of JAXB in Java 11 -->
+		<dependency>
+			<groupId>com.sun.activation</groupId>
+			<artifactId>javax.activation</artifactId>
+			<version>${javax.activation.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.xml.bind</groupId>
+			<artifactId>jaxb-api</artifactId>
+			<version>${jaxb.api.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.sun.xml.bind</groupId>
+			<artifactId>jaxb-core</artifactId>
+			<version>${jaxb.api.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.sun.xml.bind</groupId>
+			<artifactId>jaxb-impl</artifactId>
+			<version>${jaxb.api.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.10</version>
+		</dependency>
+
+	</dependencies>
+
+	<profiles>
+		<profile>
+			<!-- All the modules that require nothing but JBoss Enterprise Application 
+				Platform or JBoss EAP -->
+			<id>default</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+				<property>
+					<name>default</name>
+					<value>!disabled</value>
+				</property>
+			</activation>
+		</profile>
+		<profile>
+			<!-- All the quickstarts that require Postgres to be running -->
+			<id>requires-postgres</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+				<property>
+					<name>requires-postgres</name>
+					<value>!disabled</value>
+				</property>
+			</activation>
+		</profile>
+		<profile>
+			<!-- All the quickstarts that have weird requirements around deployment 
+				that Maven can't handle -->
+			<id>complex-dependencies</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+				<property>
+					<name>complex-dependencies</name>
+					<value>!disabled</value>
+				</property>
+			</activation>
+		</profile>
+		<profile>
+			<!-- All the quickstarts that require the "standalone-full" profile to 
+				be in use -->
+			<id>requires-full</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+				<property>
+					<name>requires-full</name>
+					<value>!disabled</value>
+				</property>
+			</activation>
+		</profile>
+		<profile>
+			<!-- All the quickstarts that require the xts to be enabled -->
+			<id>requires-xts</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+				<property>
+					<name>requires-xts</name>
+					<value>!disabled</value>
+				</property>
+			</activation>
+		</profile>
+		<profile>
+			<id>functional-tests</id>
+		</profile>
+
+		<profile>
+			<!-- An optional Arquillian testing profile that executes tests in your 
+				JBoss EAP instance. This profile will start a new JBoss EAP instance, and 
+				execute the test, shutting it down when done. Run with: mvn clean verify 
+				-Parq-managed -->
+			<id>arq-managed</id>
+			<dependencies>
+				<dependency>
+					<groupId>org.wildfly.arquillian</groupId>
+					<artifactId>wildfly-arquillian-container-managed</artifactId>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<version>${version.failsafe.plugin}</version>
+						<executions>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<profile>
+			<!-- An optional Arquillian testing profile that executes tests in a remote 
+				JBoss EAP instance. Run with: mvn clean verify -Parq-remote -->
+			<id>arq-remote</id>
+			<dependencies>
+				<dependency>
+					<groupId>org.wildfly.arquillian</groupId>
+					<artifactId>wildfly-arquillian-container-remote</artifactId>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<executions>
+							<execution>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>docs</id>
+			<activation>
+				<property>
+					<name>release</name>
+				</property>
+			</activation>
+			<modules>
+				<!-- not real maven projects, but here for centralized mgmt and docs -->
+				<module>jts-distributed-crash-rec</module>
+				<module>messaging-clustering</module>
+			</modules>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.wildfly.maven.plugins</groupId>
+						<artifactId>quickstart-documentation-plugin</artifactId>
+						<version>${version.org.wildfly.quickstarts.documentation.plugin}</version>
+						<inherited>false</inherited>
+						<configuration>
+							<rootDirectory>.</rootDirectory>
+							<targetDocument>README.adoc</targetDocument>
+						</configuration>
+						<executions>
+							<execution>
+								<id>generate-toc</id>
+								<phase>generate-resources</phase>
+								<goals>
+									<goal>table-of-contents</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.asciidoctor</groupId>
+						<artifactId>asciidoctor-maven-plugin</artifactId>
+						<version>1.5.6</version>
+						<configuration>
+							<backend>html5</backend>
+							<attributes>
+								<artifactId>${project.artifactId}</artifactId>
+							</attributes>
+							<resources>
+								<resource>
+									<directory>.</directory>
+									<excludes>
+										<exclude>**/*</exclude>
+									</excludes>
+								</resource>
+							</resources>
+							<doctype>article</doctype>
+							<sourceDirectory>.</sourceDirectory>
+							<sourceDocumentName>README.adoc</sourceDocumentName>
+							<outputFile>README.html</outputFile>
+						</configuration>
+						<executions>
+							<execution>
+								<id>output-html</id>
+								<phase>generate-resources</phase>
+								<goals>
+									<goal>process-asciidoc</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>adoc</id>
+			<activation>
+				<file>
+					<missing>README.adoc</missing>
+				</file>
+			</activation>
+			<properties>
+				<asciidoctor.skip>true</asciidoctor.skip>
+			</properties>
+		</profile>
+		<profile>
+			<id>dist</id>
+			<activation>
+				<property>
+					<name>release</name>
+				</property>
+			</activation>
+			<modules>
+				<module>dist</module>
+			</modules>
+		</profile>
+		<profile>
+			<!-- When built in OpenShift the 'openshift' profile will be used when 
+				invoking mvn. -->
+			<!-- Use this profile for any OpenShift specific customization your app 
+				will ne ed. -->
+			<!-- By default that is to put the resulting archive into the 'deployments' 
+				folder. -->
+			<!-- http://maven.apache.org/guides/mini/guide-building-for-different-environments.html -->
+			<id>openshift</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-war-plugin</artifactId>
+						<version>${version.war.plugin}</version>
+						<configuration>
+							<warName>ROOT</warName>
+						</configuration>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-source-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>attach-sources</id>
+								<phase>none</phase>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
+</project>
