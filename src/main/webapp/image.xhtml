@@ -1,0 +1,94 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	template="/WEB-INF/templates/default.xhtml">
+	<ui:define name="content">
+	
+	
+        <!-- Section for Movie details -->
+        
+        <h:form id="frmImageDetails" enctype="multipart/form-data"> 
+
+			<!-- Refreshing detail -->
+            <f:event type="preRenderView" listener="#{imageModel.refresh}"/>	
+                
+            <h:panelGrid columns="3">
+                <h:outputLabel for="imdbId" value="IMDB Id:"
+                     style="white-space: nowrap;" />
+                <h:inputText id="imdbId" value="#{imageModel.imdbId}" />
+                <h:message for="imdbId" errorClass="errorMessageStyle" />
+
+                <h:outputLabel for="id" value="Id:"
+                     style="white-space: nowrap;" />
+                <h:inputText id="id" value="#{imageModel.id}" />
+                <h:message for="id" errorClass="errorMessageStyle" />
+
+                <h:outputLabel for="description" value="Description:"
+                     style="white-space: nowrap;" />
+                <h:inputText id="description"
+                    value="#{imageModel.description}"/>
+                <h:message for="description" errorClass="errorMessageStyle" />
+
+                     
+                <h:outputLabel for="imageFile" value="Image File"
+                     style="white-space: nowrap;" />
+                <h:inputFile id="imageFile" 
+                      value="#{imageModel.imageFile}"
+                      validator="#{imageModel.validateFile}"/>
+                <h:message for="imageFile" errorClass="errorMessageStyle" />
+                
+            </h:panelGrid>
+
+            <h:panelGrid columns="5">
+                <h:commandButton id="load"
+                    action="#{imageModel.load}"
+                    value="Load" />
+
+                <h:commandButton id="registerImage"
+                    action="#{imageModel.registerImage}"
+                    value="Register" />
+
+                <h:commandButton id="updateImage"
+                    action="#{imageModel.updateImage}"
+                    value="Update"/>
+                        
+                <h:commandButton id="removeImage"
+                    action="#{imageModel.removeImage()}"
+                        value="Remove" />
+                        
+                <h:commandButton id="clearForm"
+                    action="#{imageModel.clear}"
+                    value="Clear">
+                        <f:ajax execute="@form" render="frmImageDetails" />
+                    </h:commandButton>
+            </h:panelGrid>
+                       
+        </h:form>
+           
+        <!-- Messages -->
+ 		<h:form id="frmImageMessages" styleClass="messageBox">
+           <h:messages styleClass="messages"
+               errorClass="errorMessageStyle" infoClass="infoMessageStyle"
+               warnClass="warningMessageStyle" globalOnly="true" tooltip="true"/>
+        </h:form>      
+
+        <hr /> 
+        
+        <!-- Section for Image content display -->   
+           
+        <p>Image</p>
+ 		<h:form id="frmImageContent">
+            <img src="data:image/jpeg;base64, #{imageModel.convertImage(imageModel.content)}" width="700" />        
+        </h:form>     
+        
+         <!-- Websockets channels -->
+		<h:form>
+            <f:websocket channel="movieChannel">
+                <f:ajax event="movieListNotification" render="frmImageDetails frmImageContent frmImageMessages" />
+           </f:websocket>
+        </h:form>   
+                                        
+	</ui:define>
+</ui:composition>

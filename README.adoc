@@ -1,13 +1,13 @@
-= Videostore: Assortment of technologies including Arquillian
+= Videostore: Assortment of technologies
 :author: Cene Lavrič
 :level: Intermediate
-:technologies: CDI, JSF, JPA, EJB, JAX-RS, BV. TBD: JSF, JAX-RS
+:technologies: CDI, JSF, JPA, EJB, JAX-RS, BV.
 
 [abstract]
-The `videostore` project demonstrates a Java 11 web-enabled database application using JSF, CDI, EJB, JPA, and Bean Validation. Project is coupled with JBoss/Wildfly container following organization 
-already known from https://github.com/wildfly/quickstart/. Implementation is inspired by Backend Coding Challenge from company Beenius.
+The `videostore` project demonstrates a Java 8 web-enabled database application using JSF 2.3, CDI 2.0, EJB 3, JPA 2.1, and Bean Validation 2.0. Project is coupled with JBoss/Wildfly container following common structure 
+already known from https://github.com/wildfly/quickstart/. Domain has been inspired by Backend Coding Challenge from company Beenius.
 
-== Beenius Backend Coding Challenge
+== Domain: Beenius Backend Coding Challenge
 
 Project is a backend application for movies and actors management, described in details in the following sections. Keep in mind that application can be used by multiple clients at the same time and all data needs to be persisted somewhere (preferred H2 database).
 
@@ -30,24 +30,124 @@ Actors have properties as first name, last name, born date, list of movies, etc.
 
 The `videostore` quickstart is a deployable Maven 3 project designed to demonstrate typical project elements developing with {javaVersion} on {productNameFull}.
 
-It demonstrates how to create a compliant {javaVersion} application using CDI,  EJB, JPA, and Bean Validation. It also includes a persistence unit and some sample persistence and transaction code to introduce you to database access in enterprise Java.
-
-
-== What will it be in the end?
-
-Future commits will extend this project to support JAX-RS and JSF.
+It demonstrates how to create a simple application using JSF, JAX-RS, CDI, EJB, JPA, and Bean Validation.
+Please note that has been intentionally tuned for high interactivity rather than high performance.
 
 == Deploying the Application
 
-
-Application supports no user interaction yet. User Arquillian tests to run/debug the application.
+Application provides JSF and REST interfaces. 
+Use Arquillian tests to run/debug the application.
 
 The application should be deployed to a Wildfly server; preferred is version 18. It will use integrated H2 database. Use maven profiles 'arq-remote' and 'arq-managed' for running Arquillian tests.
 
 == Access the Application
 
-The application will be running at the following URL: http://localhost:8080/videostore/.
+The JSF application will be running at the following URL: http://localhost:8080/videostore/
+REST interface is available through the following base URL
+http://localhost:8080/videostore/rest/registration
+Use Maven to create Javadoc documentation.
 
+===  High Interactivity
 
+This example demonstrates how to use CDI Event and Websockets communication between client and server. Server pushes a notification about a movie list change to JSF web page in order to update displayed list contents. Consequently any repository change operation immediately results on JSF view regardless of its origin (JSF, REST)
 
+===== Back-end service
+
+Back-end operations against persisted movies are propagated to presentation layer via CDI event mechanism. Event is further qualified via _@MovieEvent_. For each operation initiated either from Facelets or REST service back-end service fires an event.
+
+----
+@Stateless
+public class RegisterService {
+
+  @Inject
+  MovieRepository movieRepo;
+  
+  @Inject
+  @MovieEvent
+  private Event<String> movieEventSrc;
+  ...
+  public String registerMovie(Movie movie) 
+      throws EjbConstraintViolationException, EjbValidationException {
+    ...
+    final Movie savedMovie = movieRepo.save(movie);
+    
+    movieEventSrc.fire(composeEvent(savedMovie));;
+    
+    return savedMovie;
+  }
+----
+
+===== Websockets server
+
+Server is responsible for communicating movie change to JSF facelet. 
+
+----
+@RequestScoped
+public class MovieChangeNotifier {
+  
+  @Inject
+  MovieRepository movieRepository;
+  
+  @Inject 
+  @Push (channel = "movieChannel")
+  private PushContext movieChannel;
+  
+  public void onMovieEvent(
+      @Observes(during = TransactionPhase.AFTER_SUCCESS) 
+      @MovieEvent 
+      final String event) {
+    movieChannel.send("movieListNotification");
+  }
+}
+----
+CDI Events together with Websockets are responsible for keeping the Facelet level synchronized with the persistence layer. Server is nofified via @Push context method to refresh facelet content from database before rendering.
+
+===== Websockets client
+
+Client initiates Websockets connection through a handshake protocol.
+
+----
+<h:panelGroup id="pgMovies">            
+  <h:form id="frmMovieList" rendered="#{movieTableModel.recordCount gt 0}">
+			
+  <!-- Refreshing data table -->
+  <f:event type="preRenderView" listener="#{movieTableModel.refresh}"/>	
+
+...
+
+<f:websocket channel="movieChannel">
+  <f:ajax event="movieListNotification" render="pgMovies" />
+</f:websocket>
+
+----
+
+A f:websocket element establishes communication named movieChannel to Websockets server.
+Upon reception of movieListNotification notification panelGroup element is pre-rendered.
+
+===== Project Configuration
+Websockets requires extension of web.xml with:
+----
+<context-param>
+  <param-name>javax.faces.ENABLE_WEBSOCKET_ENDPOINT</param-name>
+  <param-value>true</param-value>
+</context-param>
+
+<context-param>
+  <param-name>javax.faces.ENABLE_CDI_RESOLVER_CHAIN</param-name>
+  <param-value>true</param-value>
+</context-param>
+----
+===== Wildfly server JSF 2.3 Websockets configuration.
+
+You only need to keep in mind to explicitly instruct WildFly 18 to use standalone-ee8.xml when you intend to use JSF 2.3 on it. Also when used in the IDE. In Eclipse, when creating the server, you can specify it in the Configuration file entry of New Server wizard (normally defaults to standalone.xml).
+
+===== Wildfly server Mojarra issue.
+
+You will notice Websocket PushContext not working anymore after application redeploy.
+
+This is actually a bug in JSF 2.3 Websocket implementation in Wildfly 18.
+This container uses Mojarra to implementation of JSF 2.3.
+Issue has been registered in Mojarra github community but no proper fix is available.
+
+The workaround for this issue is to restart Wildfly server. 
 

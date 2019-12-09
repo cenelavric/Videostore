@@ -1,0 +1,102 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:ez="http://java.sun.com/jsf/composite/util"
+	xmlns:a="http://xmlns.jcp.org/jsf/passthrough"
+	template="/WEB-INF/templates/default.xhtml">
+	<ui:define name="content">
+
+        <!-- Table text field filter -->
+		<h:form id="frmMovieFilter">
+			<h:selectBooleanCheckbox id="chkFilterAppliedToMovies" value="#{movieTableModel.titleFilter.chkFilterApplied}" disabled="#{empty movieTableModel.titleFilter.inputFilterSearchFor}">
+				<f:ajax event="change" execute="@this" render="frmMovieFilter pgMovies" /></h:selectBooleanCheckbox>
+			<h:outputLabel value="#{movieTableModel.titleFilter.query}" style="white-space: nowrap;" />
+			<h:inputText id="inputFilterSearchForMovie"	a:placeholder="Enter text then unfocus" value="#{movieTableModel.titleFilter.inputFilterSearchFor}">
+				<f:ajax event="change" execute="@this" render="frmMovieFilter pgMovies" /></h:inputText>
+		</h:form>
+
+        <!--Data table with paginator -->
+		<h:panelGroup id="pgMovies">            
+			<h:form id="frmMovieList" rendered="#{movieTableModel.recordCount gt 0}">
+			
+			    <!-- Refreshing data table -->
+                <f:event type="preRenderView" listener="#{movieTableModel.refresh}"/>	
+                
+                <!-- Paginator with table definition -->                	
+				<ez:paginator paginateModel="#{movieTableModel}">
+					<h:dataTable id="moviesTable" var="item" value="#{movieTableModel.data}" styleClass="simpletablestyle">
+						<h:column>
+							<f:facet name="header">Id</f:facet>#{item.imdbId}</h:column>
+						<h:column>
+							<f:facet name="header">Title</f:facet>#{item.title}</h:column>
+						<h:column>
+							<f:facet name="header">Year</f:facet>#{item.year}</h:column>
+						<h:column>
+							<f:facet name="header">Description</f:facet>#{item.description}</h:column>
+						<h:column>
+							<f:facet name="header"></f:facet>
+							<h:commandButton value="Details" action="movie-details" actionListener="#{movieModel.setMovie(movieTableModel.getData().getRowData())}"/>
+							</h:column>
+						<h:column>
+							<f:facet name="header"></f:facet>
+							<h:commandButton value="CastCandidate" action="#{movieCastCandidateTableModel.add(movieTableModel.getData().getRowData())}" />
+							</h:column>
+						<h:column>
+							<f:facet name="header"></f:facet>
+							<h:commandButton value="Remove"	action="#{movieModel.removeSelectedMovie(movieTableModel.getData().getRowData().imdbId)}" />
+							</h:column>
+					</h:dataTable>
+				</ez:paginator>
+			</h:form>
+			<h:panelGroup id="frmNoMovies" rendered="#{movieTableModel.recordCount eq 0}">
+                <h:outputText value="#{movieTableModel.emptyListStatus}"/>
+			</h:panelGroup>
+		</h:panelGroup>  
+
+        <hr /> 
+        
+        <!-- Section for Movie Cast Candidates -->
+        
+        <!--Data table without paginator -->
+		<h:panelGroup id="pgMovieCastCandidates">   
+			<h:form id="frmMovieCastCandidateList" rendered="#{movieCastCandidateTableModel.recordCount gt 0}">
+		        <p>Movie cast candidates:</p>         
+			
+ 			    <!-- Refreshing data table -->
+                <f:event type="preRenderView" listener="#{movieCastCandidateTableModel.refresh()}"/>	
+                
+                <!-- Table definition -->                	
+				<h:dataTable id="movieCastCandidatesTable" var="item" value="#{movieCastCandidateTableModel.data}" styleClass="simpletablestyle">
+					<h:column>
+						<f:facet name="header">Id</f:facet>#{item.imdbId}</h:column>
+					<h:column>
+						<f:facet name="header">Title</f:facet>#{item.title}</h:column>
+					<h:column>
+						<f:facet name="header">Year</f:facet>#{item.year}</h:column>
+					<h:column>
+						<f:facet name="header">Description</f:facet>#{item.description}</h:column>
+					<h:column>
+						<f:facet name="header"></f:facet>
+						<h:commandButton value="Remove" action="#{movieCastCandidateTableModel.removeSelected()}" />
+						</h:column>
+				</h:dataTable>
+				
+				<h:outputFormat value="Total number of retrieved records : {0}.">
+                    <f:param value="#{movieCastCandidateTableModel.recordCount}" /></h:outputFormat>
+			</h:form>
+			<h:form id="frmNoMovieCastCandidates" rendered="#{movieCastCandidateTableModel.recordCount eq 0}">
+                <h:outputText value="#{movieCastCandidateTableModel.emptyListStatus}"/>
+			</h:form>
+		</h:panelGroup>   
+		
+        <!-- Websockets channel -->
+		<h:form id="frmMoviesSocket">
+           <f:websocket channel="movieChannel">
+                <f:ajax event="movieListNotification" render="pgMovies pgMovieCastCandidates" />
+           </f:websocket>
+        </h:form>      
+             
+	</ui:define>
+</ui:composition>

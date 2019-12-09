@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	template="/WEB-INF/templates/default.xhtml">
+	<ui:define name="content">
+
+		<h:outputText value="Some common facts and limitations about domain and its implementation..." />
+		<p>Movie and lists can be viewed by simple offset pagination and field search capabilities.
+			Movie lists are sorted by movie title while actors by last and first name.
+			Beside browsing editing is also supported for all three entity types.
+			Integrated CDI Events and WebSockets provide highly interactive picture about persistence layer to browser clients.
+			In contrast to this JSF interface application also provides basic entity operations over a REST interface.</p>
+
+		<h3>Actor-List</h3>
+		<p>Lists actors with paging and search capabilities.
+		Provides removing of actors or selecting them as cast candidates. 
+		Facilitates individual actor selection with navigation to Actor-Details view.
+		</p>
+
+		<h3>Movie-List</h3>
+		<p>Lists actors with paging and search capabilities.
+		Provides removing of movies or selecting them as cast candidates.
+		Facilitates individual movie selection with navigation to Movie-Details view.
+		
+		</p>
+
+		<h3>Actor-Details</h3>
+		<p>Displays individual actor with a list of casted movies.
+		Provides basic create, update and delete operations to actors. 
+		Provides casting operations towards movies.</p>
+
+		<h3>Movie-Details</h3>
+		<p>Displays individual movie with a list of casted actors and associated images.
+		Provides basic movie create, update and delete operations to actors and removal of images.
+		Provides casting operations towards actors.
+		Facilitates individual image selection with navigation to Image view.
+		</p>
+
+		<h3>Image</h3>
+		<p>Displays image details; attributes including image itself.
+		Provides basic create with upload, update and delete operations.
+		</p>
+
+	</ui:define>
+</ui:composition>

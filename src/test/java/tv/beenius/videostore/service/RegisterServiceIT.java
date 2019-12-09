@@ -1,4 +1,4 @@
-package tv.beenius.videostore.data.test;
+package tv.beenius.videostore.service;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -29,10 +29,11 @@ import org.junit.runner.RunWith;
 import tv.beenius.videostore.data.ActorRepository;
 import tv.beenius.videostore.data.ImageRepository;
 import tv.beenius.videostore.data.MovieRepository;
+import tv.beenius.videostore.exception.EjbConstraintViolationException;
+import tv.beenius.videostore.exception.EjbValidationException;
 import tv.beenius.videostore.model.Actor;
 import tv.beenius.videostore.model.Image;
 import tv.beenius.videostore.model.Movie;
-import tv.beenius.videostore.service.RegisterService;
 import tv.beenius.videostore.util.ImageUtil;
 import tv.beenius.videostore.util.Resources;
 
@@ -54,6 +55,8 @@ public class RegisterServiceIT {
         .addClasses(
             Actor.class, 
             ActorRepository.class, 
+            EjbConstraintViolationException.class,
+            EjbValidationException.class,
             Image.class,
             ImageRepository.class,
             ImageUtil.class, 
@@ -103,17 +106,12 @@ public class RegisterServiceIT {
   private List<Movie> registeredMovies;
   
   private Optional<Actor> optionalRegisteredActor;
-  private Optional<Image> optionalRegisteredImage;
   private Optional<Movie> optionalRegisteredMovie;
   
   private Actor registeredActor;
   private Image registeredImage;
   private Movie registeredMovie;
   
-  private Long actorAndyMacDowellId;
-  private Long actorBillMurrayId;
-  
-  private Long imageGroundhogDayPosterId;
   
   private byte[] imageGroundhogDayAlarmClockContent;
   private byte[] imageGroundhogDayPosterContent;
@@ -207,7 +205,7 @@ public class RegisterServiceIT {
   
   /**
    * Testing: JPA creation of entities via RegisterService.
-   * Scenario: Register a movie with a movie image.
+   * Scenario: Register a movie with a movie image within same transaction.
    * Expected: Movie with movie image becomes managed entity.
    */
   @Test
@@ -216,14 +214,10 @@ public class RegisterServiceIT {
     // Registration.
     
     movieGroudhogDay.getImages().add(imageGroundhogDayPoster);
-    registerService.registerMovie(movieGroudhogDay);
+    registeredMovie = registerService.registerMovie(movieGroudhogDay);
     
-    // Validate registration by retrieving movie with images.  
+    // Validate registration  
     
-    optionalRegisteredMovie = registerService
-        .findMovieWithImagesById(movieGroudhogDay.getImdbId());   
-    assertTrue(optionalRegisteredMovie.isPresent());   
-    registeredMovie = optionalRegisteredMovie.get();
     assertEquals(movieGroudhogDay.getImdbId(), registeredMovie.getImdbId());
     assertEquals(movieGroudhogDay.getTitle(), registeredMovie.getTitle());
     assertEquals(movieGroudhogDay.getDescription(), registeredMovie.getDescription());
@@ -250,14 +244,10 @@ public class RegisterServiceIT {
     
     movieGroudhogDay.getActors().add(actorAndyMacDowell);
     
-    registerService.registerMovie(movieGroudhogDay);
+    registeredMovie = registerService.registerMovie(movieGroudhogDay);
     
-    // Validate registration by retrieving movie.  
+    // Validate registration.
     
-    registeredMovies = registerService.findAllMovies();   
-    assertEquals(1, registeredMovies.size());
-    
-    registeredMovie = registeredMovies.get(0);
     assertEquals(movieGroudhogDay.getImdbId(), registeredMovie.getImdbId());
     assertEquals(movieGroudhogDay.getTitle(), registeredMovie.getTitle());
     assertEquals(movieGroudhogDay.getDescription(), registeredMovie.getDescription());
@@ -302,7 +292,7 @@ public class RegisterServiceIT {
     // Registration.
     
     actorAndyMacDowell.addMovie(movieGroudhogDay);  
-    actorAndyMacDowellId = registerService.registerActor(actorAndyMacDowell);
+    registeredActor = registerService.registerActor(actorAndyMacDowell);
     
     // Validate registration by retrieving actor.  
 
@@ -314,8 +304,6 @@ public class RegisterServiceIT {
     assertEquals(actorAndyMacDowell.getLastName(), registeredActor.getLastName());
     assertEquals(actorAndyMacDowell.getBornDate(), registeredActor.getBornDate());
     
-    assertEquals(actorAndyMacDowellId, registeredActor.getId());
-
     registeredMovies = new ArrayList<>(registeredActor.getMovies());   
     assertEquals(1, registeredMovies.size());
 
@@ -327,7 +315,7 @@ public class RegisterServiceIT {
     
     // Validate registration by retrieving movie.  
     
-    registeredMovies = registerService.findAllMovies();   
+    registeredMovies = registerService.findAllMovies(); // lazy load.
     assertEquals(1, registeredMovies.size());
     
     registeredMovie = registeredMovies.get(0);
@@ -336,6 +324,9 @@ public class RegisterServiceIT {
     assertEquals(movieGroudhogDay.getDescription(), registeredMovie.getDescription());
     assertEquals(movieGroudhogDay.getYear(), registeredMovie.getYear());
     
+    optionalRegisteredMovie = registerService.findMovieById(registeredMovie.getImdbId());
+    assertTrue(optionalRegisteredMovie.isPresent());
+    registeredMovie = optionalRegisteredMovie.get();
     registeredActors = new ArrayList<>(registeredMovie.getActors()); 
     assertEquals(1, registeredActors.size());
 
@@ -382,9 +373,8 @@ public class RegisterServiceIT {
     
     movieGroudhogDay.getActors().add(actorBillMurray);  
     registerService.registerMovie(movieGroudhogDay);
-    actorBillMurrayId = actorBillMurray.getId();   
     registerService.registerMovie(movieZombieland);   
-    registerService.registerCast(actorBillMurray.getId(), movieZombieland.getImdbId());
+    registerService.registerCast(movieZombieland.getImdbId(), actorBillMurray.getId());
     
     // Validate registration by retrieving movies.  
     
@@ -408,9 +398,9 @@ public class RegisterServiceIT {
     // Registration.
     registerService.registerMovie(movieGroudhogDay);   
     registerService.registerMovie(movieZombieland); 
-    actorBillMurrayId = registerService.registerActor(actorBillMurray);  
-    registerService.registerCast(actorBillMurrayId, movieGroudhogDay.getImdbId());
-    registerService.registerCast(actorBillMurrayId, movieZombieland.getImdbId());
+    registeredActor = registerService.registerActor(actorBillMurray);  
+    registerService.registerCast(movieGroudhogDay.getImdbId(), registeredActor.getId());
+    registerService.registerCast(movieZombieland.getImdbId(), registeredActor.getId());
     
     // Validate registration by retrieving movies.  
     
@@ -460,8 +450,8 @@ public class RegisterServiceIT {
     
     actorAndyMacDowell.addMovie(movieGroudhogDay);
     registerService.registerActor(actorAndyMacDowell);  
-    actorBillMurrayId = registerService.registerActor(actorBillMurray);   
-    registerService.registerCast(actorBillMurrayId, movieGroudhogDay.getImdbId());
+    registeredActor = registerService.registerActor(actorBillMurray);   
+    registerService.registerCast(movieGroudhogDay.getImdbId(), registeredActor.getId());
 
     // Validate registration by retrieving actors.  
 
@@ -484,11 +474,11 @@ public class RegisterServiceIT {
     
     // Registration.
     
-    actorAndyMacDowellId = registerService.registerActor(actorAndyMacDowell);
-    actorBillMurrayId = registerService.registerActor(actorBillMurray);
+    actorAndyMacDowell = registerService.registerActor(actorAndyMacDowell);
+    actorBillMurray = registerService.registerActor(actorBillMurray);
     registerService.registerMovie(movieGroudhogDay);
-    registerService.registerCast(actorAndyMacDowellId, movieGroudhogDay.getImdbId());
-    registerService.registerCast(actorBillMurrayId, movieGroudhogDay.getImdbId());
+    registerService.registerCast(movieGroudhogDay.getImdbId(), actorAndyMacDowell.getId());
+    registerService.registerCast(movieGroudhogDay.getImdbId(), actorBillMurray.getId());
 
     // Validate registration by retrieving actors.  
 
@@ -514,7 +504,7 @@ public class RegisterServiceIT {
     registerService.registerMovie(movieGroudhogDay);
     registerService.registerMovie(movieZombieland);
     
-    registeredMovies = registerService.findMovieByTitle("hog");
+    registeredMovies = registerService.findMovieByTitleSearch("hog");
     
     // Validate retrieved movies.  
       
@@ -557,17 +547,17 @@ public class RegisterServiceIT {
      
     // Registration.
     
-    actorAndyMacDowellId = registerService.registerActor(actorAndyMacDowell);
-    actorBillMurrayId = registerService.registerActor(actorBillMurray);
+    actorAndyMacDowell = registerService.registerActor(actorAndyMacDowell);
+    actorBillMurray = registerService.registerActor(actorBillMurray);
 
-    optionalRegisteredActor = registerService.findActorById(actorAndyMacDowellId);
+    optionalRegisteredActor = registerService.findActorById(actorAndyMacDowell.getId());
     
     // Validate retrieved actor.  
     
     assertTrue(optionalRegisteredActor.isPresent());
     
     registeredActor = optionalRegisteredActor.get();
-    assertEquals(actorAndyMacDowellId, registeredActor.getId()); 
+    assertEquals(actorAndyMacDowell.getId(), registeredActor.getId()); 
   }
 
   /**
@@ -592,12 +582,7 @@ public class RegisterServiceIT {
         + "inexplicably living the same day over and over again.";
     registeredMovie.setDescription(newDescription);
     
-    registerService.updateMovie(registeredMovie);
-    
-    // Validate result.
-    optionalRegisteredMovie = registerService.findMovieById(movieGroudhogDay.getImdbId());   
-    assertTrue(optionalRegisteredMovie.isPresent());
-    registeredMovie = optionalRegisteredMovie.get();
+    registeredMovie = registerService.updateMovie(registeredMovie);
     
     assertEquals(newDescription, registeredMovie.getDescription());
   }
@@ -613,20 +598,16 @@ public class RegisterServiceIT {
     // Registration.
     
     registerService.registerMovie(movieGroudhogDay);
-    imageGroundhogDayPosterId = registerService
+    imageGroundhogDayPoster = registerService
         .registerMovieImage(movieGroudhogDay.getImdbId(), imageGroundhogDayPoster);
 
     // Update movie image.
     String newDescription = "Advertisment for movie GroundhogDay.";
     imageGroundhogDayPoster.setDescription(newDescription);
     
-    registerService.updateMovieImage(imageGroundhogDayPoster);
+    registeredImage = registerService.updateImage(imageGroundhogDayPoster);
     
     // Validate update result.
-    
-    optionalRegisteredImage = registerService.findMovieImageById(imageGroundhogDayPosterId);
-    assertTrue(optionalRegisteredImage.isPresent());
-    registeredImage = optionalRegisteredImage.get();
     
     assertEquals(newDescription, registeredImage.getDescription());
   }
@@ -641,9 +622,9 @@ public class RegisterServiceIT {
     
     // Registration.
     
-    actorAndyMacDowellId = registerService.registerActor(actorAndyMacDowell);
+    actorAndyMacDowell = registerService.registerActor(actorAndyMacDowell);
     
-    optionalRegisteredActor = registerService.findActorById(actorAndyMacDowellId);   
+    optionalRegisteredActor = registerService.findActorById(actorAndyMacDowell.getId());   
     assertTrue(optionalRegisteredActor.isPresent());
     registeredActor = optionalRegisteredActor.get();
 
@@ -652,13 +633,9 @@ public class RegisterServiceIT {
     String newFirstName = "Andy";
     registeredActor.setFirstName(newFirstName);
     
-    registerService.updateActor(registeredActor);
+    registeredActor = registerService.updateActor(registeredActor);
     
     // Validate result.
-    
-    optionalRegisteredActor = registerService.findActorById(actorAndyMacDowellId);   
-    assertTrue(optionalRegisteredActor.isPresent());
-    registeredActor = optionalRegisteredActor.get();
     
     assertEquals(newFirstName, registeredActor.getFirstName());
   }
@@ -777,11 +754,11 @@ public class RegisterServiceIT {
     
     actorBillMurray.addMovie(movieGroudhogDay);
     actorBillMurray.addMovie(movieZombieland);
-    actorBillMurrayId = registerService.registerActor(actorBillMurray);
+    actorBillMurray = registerService.registerActor(actorBillMurray);
     
     // Unregister actor.
     
-    registerService.unRegisterActor(actorBillMurrayId);
+    registerService.unRegisterActor(actorBillMurray.getId());
     
     // Validate unRegistration by retrieving movies.  
     
@@ -869,6 +846,36 @@ public class RegisterServiceIT {
 
   /**
    * Testing: JPA retrieval of entities via RegisterService.
+   * Scenario: Register three movies. Define page size 2. 
+   *           Filter (search) by title. 
+   *           Find first page (starting with element 0). 
+   *           Movies are sorted by title.
+   * Expected: Single movie is found.
+   */ 
+  @Test
+  public void testFindPageOfMoviesByTitle() throws Exception {
+     
+    // Registration.
+    
+    registerService.registerMovie(movieArtOfSelfdefense);
+    registerService.registerMovie(movieGroudhogDay);
+    registerService.registerMovie(movieZombieland);
+    
+    // Retrieve first page of Movies.
+
+    registeredMovies = registerService.findPageOfMoviesByTitle(0, 2, "hog");
+    
+    // Validate retrieved movies.  
+    
+    assertEquals(1, registeredMovies.size()); 
+
+    assertThat(registeredMovies, 
+        Matchers.hasItem(
+            Matchers.hasProperty("imdbId", Matchers.is(movieGroudhogDay.getImdbId()))));
+  }
+
+  /**
+   * Testing: JPA retrieval of entities via RegisterService.
    * Scenario: Register four actors. Define page size 2. 
    *           Find second page (starting with element 2). 
    *           Actors are sorted by last name.
@@ -879,8 +886,8 @@ public class RegisterServiceIT {
      
     // Registration.
     
-    actorAndyMacDowellId = registerService.registerActor(actorAndyMacDowell);
-    actorBillMurrayId = registerService.registerActor(actorBillMurray);
+    actorAndyMacDowell = registerService.registerActor(actorAndyMacDowell);
+    actorBillMurray = registerService.registerActor(actorBillMurray);
     registerService.registerActor(actorChrisElliott);
     registerService.registerActor(actorJesseEisenberg);
 
@@ -894,15 +901,15 @@ public class RegisterServiceIT {
 
     assertThat(registeredActors, 
         Matchers.hasItem(
-            Matchers.hasProperty("id", Matchers.is(actorAndyMacDowellId))));
+            Matchers.hasProperty("id", Matchers.is(actorAndyMacDowell.getId()))));
     assertThat(registeredActors, 
         Matchers.hasItem(
-            Matchers.hasProperty("id", Matchers.is(actorBillMurrayId))));
+            Matchers.hasProperty("id", Matchers.is(actorBillMurray.getId()))));
   }  
 
   /**
    * Testing: JPA registering image to a movie via RegisterService.
-   * Scenario: Register an image to a registered movie. 
+   * Scenario: Register an image to already registered movie. 
    * Expected: Image becomes managed entity.
    */
   @Test
@@ -914,22 +921,19 @@ public class RegisterServiceIT {
     
     // Register movie image to movie.
     
-    imageGroundhogDayPosterId = registerService
+    registeredImage = registerService
         .registerMovieImage(movieGroudhogDay.getImdbId(), imageGroundhogDayPoster);
    
     // Validate image registration by retrieving movie images. 
-    optionalRegisteredMovie = registerService
-        .findMovieWithImagesById(movieGroudhogDay.getImdbId());   
-    assertTrue(optionalRegisteredMovie.isPresent());  
-    registeredMovie = optionalRegisteredMovie.get(); 
+
+    registeredImages =  registerService.findMovieImages(movieGroudhogDay.getImdbId());
     
-    registeredImages = new ArrayList<>(registeredMovie.getImages());
     assertEquals(1, registeredImages.size());
     
     assertThat(registeredImages, 
         Matchers.hasItem(
             Matchers.hasProperty("id",
-                Matchers.is(imageGroundhogDayPosterId))));
+                Matchers.is(registeredImage.getId()))));
   }
 
   /**
@@ -946,14 +950,9 @@ public class RegisterServiceIT {
     movieGroudhogDay.getImages().add(imageGroundhogDayPoster);
     registerService.registerMovie(movieGroudhogDay);
     
-    // Validate registration by retrieving movie with images.  
+    // Validate registration by retrieving movie images.  
     
-    optionalRegisteredMovie = registerService
-        .findMovieWithImagesById(movieGroudhogDay.getImdbId());   
-    assertTrue(optionalRegisteredMovie.isPresent());   
-    registeredMovie = optionalRegisteredMovie.get();
-    
-    registeredImages = new ArrayList<>(registeredMovie.getImages());
+    registeredImages =  registerService.findMovieImages(movieGroudhogDay.getImdbId());
     assertEquals(2, registeredImages.size());
     
     // Unregister image from movie.
@@ -962,18 +961,102 @@ public class RegisterServiceIT {
         movieGroudhogDay.getImdbId(), 
         imageGroundhogDayPoster.getId());
     
-    // Validate unregistration by retrieving movie with images.  
+    // Validate un-registration by retrieving movie images.  
     
-    optionalRegisteredMovie = registerService
-        .findMovieWithImagesById(movieGroudhogDay.getImdbId());   
-    assertTrue(optionalRegisteredMovie.isPresent());   
-    registeredMovie = optionalRegisteredMovie.get();
-    
-    registeredImages = new ArrayList<>(registeredMovie.getImages());
+    registeredImages = registerService.findMovieImages(movieGroudhogDay.getImdbId());
     assertEquals(1, registeredImages.size());
     
     registeredImage = registeredImages.get(0);
     assertEquals(imageGroundhogDayAlarmClock.getId(), registeredImage.getId());
+  }
+
+  /**
+   * Testing: JPA counting entities via RegisterService.
+   * Scenario: Register two actors. Count actors.
+   * Expected: Count is 2.
+   */ 
+  @Test
+  public void testCountActors() throws Exception {
+     
+    // Registration.
+    
+    registerService.registerActor(actorAndyMacDowell);
+    registerService.registerActor(actorBillMurray);
+    
+    // Retrieve count of actors.
+
+    long count = registerService.countActors();
+    
+    // Validate count.  
+    
+    assertEquals(2, count); 
+  }
+
+  /**
+   * Testing: JPA counting entities via RegisterService.
+   * Scenario: Register two movies. Count movies.
+   * Expected: Count is 2.
+   */ 
+  @Test
+  public void testCountMovies() throws Exception {
+     
+    // Registration.
+    
+    registerService.registerMovie(movieArtOfSelfdefense);
+    registerService.registerMovie(movieGroudhogDay);
+    
+    // Retrieve count of movies.
+
+    long count = registerService.countMovies();
+    
+    // Validate count.  
+    
+    assertEquals(2, count); 
+  }
+
+  /**
+   * Testing: JPA counting entities via RegisterService.
+   * Scenario: Register two movies. Count movies by title containing search string.
+   * Expected: Count is 1.
+   */ 
+  @Test
+  public void testCountMoviesByTitle() throws Exception {
+     
+    // Registration.
+    
+    registerService.registerMovie(movieArtOfSelfdefense);
+    registerService.registerMovie(movieGroudhogDay);
+    
+    // Retrieve count of movies.
+
+    long count = registerService.countMoviesByTitle("hog");
+    
+    // Validate count.  
+    
+    assertEquals(1, count); 
+  }
+
+  /**
+   * Testing: JPA counting entities via RegisterService.
+   * Scenario: Register a movie with two images. Count movie images
+   * Expected: Count is 2..
+   */
+  @Test
+  public void testCountMovieImages() throws Exception {
+    
+    // Registration.
+    
+    movieGroudhogDay.getImages().add(imageGroundhogDayAlarmClock);
+    movieGroudhogDay.getImages().add(imageGroundhogDayPoster);
+    registerService.registerMovie(movieGroudhogDay);
+    
+    // Retrieve count of movie images.
+
+    long count = registerService.countMovieImages(movieGroudhogDay.getImdbId());
+    
+    // Validate count.  
+    
+    assertEquals(2, count); 
   }
 
 }

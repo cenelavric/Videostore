@@ -7,7 +7,6 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
-import javax.validation.constraints.NotNull;
 
 import tv.beenius.videostore.model.Actor;
 
@@ -21,42 +20,40 @@ public class ActorRepository {
    * Saves actor into database.
    * 
    * @param actor Actor attributes.
-   * @return Auto-generated actor id.
-   * @throws Exception on persistence failure.
+   * @return Actor Saved actor.
    */
-  public Long save(@NotNull Actor actor) throws Exception {
-    try {
-      em.persist(actor);
-    } catch (Exception e) {
-      throw new Exception(actor.toString() + " failed to persist. Check entity attributes.",
-          e.getCause());
-    }
-    return actor.getId();
+  public Actor save(Actor actor) {
+    em.persist(actor);
+    return actor;
   }
   
   /**
-   * Fetches actor entity into persistence context. of managed entity actor:
+   * Fetches actor entity into persistence context.
    * Updates selected attribute firstName, lastName and bornDate.
    * 
    * @param actor Updated actor.
-   * @throws Exception on update failure.
+   * @return Optional Actor.
    */
-  public void update(@NotNull Actor actor) throws Exception {
-    try {
-      Optional<Actor> optionalActor = findById(actor.getId());
+  public Optional<Actor> update(Actor actor) {
+    Optional<Actor> optionalActor = findById(actor.getId());
+    
+    if (optionalActor.isPresent()) {
+      Actor retrievedActor = optionalActor.get();
       
-      if (optionalActor.isPresent()) {
-        Actor retrievedActor = optionalActor.get();
-        
+      if (actor.getFirstName() != null) {
         retrievedActor.setFirstName(actor.getFirstName());
-        retrievedActor.setLastName(actor.getLastName().orElse(null));
-        retrievedActor.setBornDate(actor.getBornDate());   
       }
-    } catch (Exception e) {
-      throw new Exception(actor.toString() + " failed to update. "
-          + "Refresh actor set and check entity attributes.",
-          e.getCause());
+      
+      if (actor.getLastName().isPresent()) {
+        retrievedActor.setLastName(actor.getLastName().orElse(null));
+      }
+      
+      if (actor.getBornDate() != null) {
+        retrievedActor.setBornDate(actor.getBornDate());
+      }   
     }
+    
+    return optionalActor;
   }
   
   /**
@@ -64,37 +61,81 @@ public class ActorRepository {
    * 
    * @param id Actor identifier.
    * @return Optional actor.
-   * @throws Exception on retrieval failure.
    */
-  public Optional<Actor> findById(@NotNull Long id) throws Exception {
-    Actor actor;
-    try {
-      actor = em.find(Actor.class, id);
-    } catch (Exception e) {
-      throw new Exception(" Failed to retrieve actor with id {" 
-          + id + "}. Check database status.",
-          e.getCause());
-    }
+  public Optional<Actor> findById(Long id) {
+    Actor actor = em.find(Actor.class, id);
     return actor != null ? Optional.of(actor) : Optional.empty();
   }
+
+  /**
+   * Retrieves a single actor by identifier lazily.
+   *  
+   * @param id Actor identifier.
+   * @return Optional actor w/o related movies.
+   */
+  public Optional<Actor> findByIdLazily(Long id) {
+    
+    TypedQuery<Actor> q = em.createQuery(
+        "  SELECT new Actor(a.id, a.firstName, a.lastName, a.bornDate) "
+        + "FROM Actor a "
+        + "WHERE a.id =  :id", Actor.class);
+    q.setParameter("id", id);
+    
+    List<Actor> actors = q.getResultList();
+  
+    return actors.size() != 0 ? Optional.of(actors.get(0)) : Optional.empty();
+  }  
   
   /**
    * Retrieves all actors ordered by last and first name.
    * 
    * @return Sorted list of actors.
-   * @throws Exception on retrieval failure.
    */
-  public List<Actor> findAll() throws Exception {
-    try {
-      TypedQuery<Actor> q = em.createQuery(
-          "SELECT a FROM Actor a "
-          + "ORDER BY a.lastName, a.firstName", 
-          Actor.class);   
-      return q.getResultList();
-    } catch (Exception e) {
-      throw new Exception(" Failed to retrieve any actors. Check database status.",
-          e.getCause());
-    }
+  public List<Actor> findAll() {
+    TypedQuery<Actor> q = em.createQuery(
+        "SELECT a FROM Actor a "
+        + "ORDER BY a.lastName, a.firstName", 
+        Actor.class);   
+
+    return q.getResultList();
+  }
+  
+  /**
+   * Retrieves all actors for a movie by identifier lazily.
+   *  
+   * @param imdbId Movie identifier.
+   * @return List of actors.
+   */
+  public List<Actor> findMovieActorsLazily(String imdbId) {
+    
+    TypedQuery<Actor> q = em.createQuery(
+        "  SELECT NEW Actor(a.id, a.firstName, a.lastName, a.bornDate) "
+        + "FROM Actor a "
+        + "JOIN a.movies m "
+        + "WHERE m.imdbId = :imdbId " 
+        + "ORDER BY a.lastName, a.firstName", 
+        Actor.class);
+    q.setParameter("imdbId", imdbId);
+  
+    return q.getResultList();
+  }    
+  
+  /**
+   * Retrieves selected page of actors ordered by last and first name.
+   * 
+   * @param startPosition Starting actor record for page.
+   * @param maxResult Maximum page size.
+   * @return Sorted list of actors.
+   */
+  public List<Actor> findPage(int startPosition, int maxResult) {
+    TypedQuery<Actor> q = em.createQuery(
+        "  SELECT NEW Actor(a.id, a.firstName, a.lastName, a.bornDate) "
+        + "FROM Actor a "
+        + "ORDER BY a.lastName, a.firstName ", Actor.class);
+    q.setFirstResult(startPosition);
+    q.setMaxResults(maxResult);  
+    
+    return q.getResultList();
   }
   
   /**
@@ -103,50 +144,68 @@ public class ActorRepository {
    * @param startPosition Starting actor record for page.
    * @param maxResult Maximum page size.
    * @return Sorted list of actors.
-   * @throws Exception on retrieval failure.
    */
-  public List<Actor> findPage(int startPosition, int maxResult) throws Exception {
-    try {
-      TypedQuery<Actor> q = em.createQuery(
-          "SELECT a FROM Actor a ORDER BY a.lastName, a.firstName ", 
-          Actor.class);
-      q.setFirstResult(startPosition);
-      q.setMaxResults(maxResult);  
-      return q.getResultList();
-    } catch (Exception e) {
-      throw new Exception(" Failed to retrieve page of actors starting with " 
-          + "{" + startPosition + "," + " with max size " + maxResult + "} of actors. " 
-          + "Refresh actor set and check request parameters.",
-          e.getCause());
-    }
-  }
+  public List<Actor> findPageByName(int startPosition, int maxResult, String searchFor) {
+    TypedQuery<Actor> q = em.createQuery(
+        "  SELECT NEW Actor(a.id, a.firstName, a.lastName, a.bornDate) "
+        + "FROM Actor a "
+        + "WHERE a.firstName LIKE :likeString OR a.lastName LIKE :likeString "
+        + "ORDER BY a.lastName, a.firstName ", Actor.class);
+    q.setParameter("likeString","%" + searchFor + "%");
+    q.setFirstResult(startPosition);
+    q.setMaxResults(maxResult);  
+    
+    return q.getResultList();
+  }  
   
   /**
    * Removes actor and movie references from database.
+   * Operation is idempotent.
    * 
    * @param id Actor identifier.
-   * @throws Exception on failure to remov actor.
+   * @return Returns true when entity actually existed.
    */
-  public void removeById(@NotNull Long id) throws Exception {    
-    try {
-      Optional<Actor> optionalActor = findById(id);  
-      if (optionalActor.isPresent()) {
-        try {
-          Actor actor = optionalActor.get();
-          
-          actor.getMovies().forEach(movie -> {
-            movie.getActors().remove(actor);
-          });      
-          em.remove(actor);
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-      }
-    } catch (Exception e) {
-      throw new Exception(" Failed to remove actor with id {" 
-          + id + "}. Refresh actor set and check parameter id.",
-          e.getCause());
-    }
+  public boolean removeById(Long id) {    
+    Optional<Actor> optionalActor = findById(id);  
+    if (optionalActor.isPresent()) {
+      Actor actor = optionalActor.get();
+      
+      actor.getMovies().forEach(movie -> {
+        movie.getActors().remove(actor);
+      });      
+      em.remove(actor);
+      return true;
+    } 
+    
+    return false;
+  }
+ 
+  /**
+   * Counts all actors.
+   * 
+   * @return Number of all actors.
+   */
+  public long count() {
+    TypedQuery<Long> q = em.createQuery(
+        "  SELECT COUNT(a) from Actor a", 
+        Long.class);    
+    return q.getSingleResult();
   }
   
+  /**
+   * Counts actors with name containing search string.
+   * 
+   * @param searchFor Search string from firstname/lastname.
+   * @return Number of filtered actors.
+   */
+  public long countByName(String searchFor) {
+    TypedQuery<Long> q = em.createQuery(
+        "  SELECT COUNT(a) from Actor a "
+        + "WHERE a.firstName LIKE :likeString OR a.lastName LIKE :likeString", 
+        Long.class);
+    q.setParameter("likeString","%" + searchFor + "%");
+
+    return q.getSingleResult();
+  }
+
 }

@@ -24,215 +24,298 @@ public class MovieRepository {
    * Saves movie into database.
    * 
    * @param movie Movie attributes.
-   * @return Movie imdbId.
-   * @throws Exception persistence failure.
+   * @return Movie Saved movie.
    */
-  public String save(@NotNull Movie movie) throws Exception {
-    try {
-      em.persist(movie);
-    } catch (Exception e) {
-      throw new Exception(movie.toString() + " failed persisting. Check entity attributes.",
-          e.getCause());
-    }
-    return movie.getImdbId();
+  public Movie save(Movie movie) {  
+    em.persist(movie);
+    return movie;
   }
   
   /**
    * Fetches movie entity into persistence context.
-   * Updates selected attributes title, description, year and images.
+   * Updates selected attributes title, description and year.
    * 
-   * @param movie Updated movie.
-   * @throws Exception on update failure.
+   * @param movie Movie to be updated.
+   * @return Optional Movie.
    */
-  public void update(@NotNull Movie movie) throws Exception {
-    try {
-      Optional<Movie> optionalMovie = findById(movie.getImdbId());
+  public Optional<Movie> update(Movie movie) {
+    Optional<Movie> optionalMovie = findById(movie.getImdbId());
+    
+    if (optionalMovie.isPresent()) {
+      Movie retrievedMovie = optionalMovie.get();
       
-      if (optionalMovie.isPresent()) {
-        Movie retrievedMovie = optionalMovie.get();
-        
+      if (movie.getTitle() != null) {
         retrievedMovie.setTitle(movie.getTitle());
-        retrievedMovie.setDescription(movie.getDescription());
-        retrievedMovie.setYear(movie.getYear());
-        
-        retrievedMovie.setImages(movie.getImages());
-        
-        // Enforce generation of image entity identifiers.
-        em.flush();
       }
-    } catch (Exception e) {
-      throw new Exception(movie.toString() + " failed to update. "
-          + "Refresh movie set and check entity attributes.",
-          e.getCause());
+      if (movie.getDescription() != null) {
+        retrievedMovie.setDescription(movie.getDescription());
+      }
+      if (movie.getYear() != null) {
+        retrievedMovie.setYear(movie.getYear());
+      }
     }
+    
+    return optionalMovie;
   }
   
   /**
-   * Retrieves a movie by identifier.
+   * Retrieves a single movie by identifier.
    *  
    * @param imdbId Movie identifier.
-   * @return Optional movie.
-   * @throws Exception on retrieval failure.
+   * @return Optional movie together with related actors and images.
    */
-  public Optional<Movie> findById(@NotNull String imdbId) throws Exception {
-    Movie movie;
-    try {
-      movie = em.find(Movie.class, imdbId);
-    } catch (Exception e) {
-      throw new Exception(" Failed to retrieve movie with imdbId {" 
-        + imdbId + "}. Check database status.",
-        e.getCause());
-    }
-    
+  public Optional<Movie> findById(String imdbId) {
+    Movie movie  = em.find(Movie.class, imdbId);   
     return movie != null ? Optional.of(movie) : Optional.empty();
+  }
+
+  /**
+   * Retrieves a single movie by identifier lazily.
+   *  
+   * @param imdbId Movie identifier.
+   * @return Optional movie w/o related actors and images.
+   */
+  public Optional<Movie> findByIdLazily(String imdbId) {
+    
+    TypedQuery<Movie> q = em.createQuery(
+        "  SELECT new Movie(m.imdbId, m.title, m.year, m.description) "
+        + "FROM Movie m "
+        + "WHERE m.imdbId =  :imdbId", Movie.class);
+    q.setParameter("imdbId", imdbId);
+    
+    List<Movie> movies = q.getResultList();
+  
+    return movies.size() != 0 ? Optional.of(movies.get(0)) : Optional.empty();
   }
   
   /**
    * Retrieves a sorted list of movies containing search string.
    * 
-   * @param searchFor Search string.
+   * @param searchFor Search string from Title.
    * @return List of selected movies ordered by title.
-   * @throws Exception on retrieval failure.
    */
-  public List<Movie> findByTitle(@NotNull String searchFor) throws Exception {
-    try {
-      TypedQuery<Movie> q = em.createQuery(
-          "  SELECT m FROM Movie m "
-          + "WHERE m.title LIKE :likeString "
-          + "ORDER BY m.title", 
-          Movie.class);
-      q.setParameter("likeString","%" + searchFor + "%");
-      return q.getResultList();
-    } catch (Exception e) {
-      throw new Exception(" Failed to retrieve movie(s) with title containing "
-          + " search string {" + searchFor + "}. Check database status.",
-          e.getCause());
-    }
+  public List<Movie> findByTitle(String searchFor) {
+    TypedQuery<Movie> q = em.createQuery(
+        "  SELECT new Movie(m.imdbId, m.title, m.year, m.description) FROM Movie m "
+        + "WHERE m.title LIKE :likeString "
+        + "ORDER BY m.title", 
+        Movie.class);
+    q.setParameter("likeString","%" + searchFor + "%");
+    
+    return q.getResultList();
   }
   
   /**
    * Retrieves all movies ordered by title.
    * 
    * @return List of movies.
-   * @throws Exception on retrieval failure.
    */
-  public List<Movie> findAll() throws Exception {
-    try {
-      TypedQuery<Movie> q = em.createQuery(
-          "  SELECT m from Movie m "
-          + "ORDER BY m.title", 
-          Movie.class);    
-      return q.getResultList();
-    } catch (Exception e) {
-      throw new Exception(" Failed to retrieve any movies. Check database status.",
-          e.getCause());
-    }
+  public List<Movie> findAll() {
+    TypedQuery<Movie> q = em.createQuery(
+        "  SELECT new Movie(m.imdbId, m.title, m.year, m.description) FROM Movie m "
+        + "ORDER BY m.title", 
+        Movie.class);  
+    
+    return q.getResultList();
   }
 
   /**
-   * Retrieves all images for a movie. 
-   * 
-   * @param imdbId Movie identifier.
+   * Retrieves all movies for an actor by identifier lazily.
+   *  
+   * @param id Actor identifier.
    * @return List of movies.
-   * @throws Exception on retrieval failure.
    */
-  public Optional<Movie> findWithImagesById(@NotNull String imdbId) throws Exception {
-    try {
-      TypedQuery<Movie> q = em.createQuery(
-          "  SELECT m FROM Movie m "
-          + "LEFT JOIN FETCH m.images i "
-          + "WHERE m.imdbId = :imdbId " 
-          + "ORDER BY i.description", 
-          Movie.class);
-      q.setParameter("imdbId", imdbId);
-      
-      Movie movie = q.getSingleResult();
-      
-      return movie != null ? Optional.of(movie) : Optional.empty();
-    } catch (Exception e) {
-      throw new Exception(" Failed to retrieve any images for movie with imdbId {" 
-        + imdbId + "}. Refresh movie set and check parameter imdbId.",
-        e.getCause());
-    }
-  }
+  public List<Movie> findActorMoviesLazily(Long id) {
+    
+    TypedQuery<Movie> q = em.createQuery(
+        "  SELECT NEW Movie(m.imdbId, m.title, m.year, m.description) "
+        + "FROM Movie m "
+        + "JOIN m.actors a "
+        + "WHERE a.id = :id " 
+        + "ORDER BY m.title", 
+        Movie.class);
+    q.setParameter("id", id);
+  
+    return q.getResultList();
+  }    
   
   /**
-   * Retrieves selected page of movies ordered by title.
+   * Retrieves selected page of movies lazily ordered by title.
    * 
    * @param startPosition Starting movie record for page.
    * @param maxResult Maximum page size.
-   * @return Sorted list of actors.
-   * @throws Exception on retrieval failure.
+   * @return Page with sorted list movies.
    */
-  public List<Movie> findPage(int startPosition, int maxResult) throws Exception {
-    try {
-      TypedQuery<Movie> q = em.createQuery("SELECT m from Movie m ORDER BY m.title", Movie.class);
-      q.setFirstResult(startPosition);
-      q.setMaxResults(maxResult); 
-      return q.getResultList();
-    } catch (Exception e) {
-      throw new Exception(" Failed to retrieve page of movies starting with " 
-        + "{" + startPosition + "," + " with max size " + maxResult + "} of actors. " 
-        + "Refresh actor set and check request parameters.",
-        e.getCause());
-    }
+  public List<Movie> findPage(int startPosition, int maxResult) {
+    TypedQuery<Movie> q = em.createQuery(
+        "  SELECT NEW Movie(m.imdbId, m.title, m.year, m.description) FROM Movie m "
+        + "ORDER BY m.title", Movie.class);
+    q.setFirstResult(startPosition);
+    q.setMaxResults(maxResult); 
+    
+    return q.getResultList();
+  }
+
+  /**
+   * Retrieves selected page of movies lazily with title containing searchFor ordered by title.
+   * 
+   * @param startPosition Starting movie record for page.
+   * @param maxResult Maximum page size.
+   * @param searchFor Search string from title.
+   * @return Page with sorted list of filtered movies.
+   */
+  public List<Movie> findPageByTitle(int startPosition, int maxResult, String searchFor) {
+  
+    TypedQuery<Movie> q = em.createQuery(
+        "  SELECT NEW Movie(m.imdbId, m.title, m.year, m.description) FROM Movie m "
+        + "WHERE m.title LIKE :likeString "
+        + "ORDER BY m.title", Movie.class);
+    q.setParameter("likeString","%" + searchFor + "%");
+    q.setFirstResult(startPosition);
+    q.setMaxResults(maxResult); 
+    
+    return q.getResultList();
   }
   
   /**
    * Removes a movie, images and actor references from database.
+   * Operation is idempotent.
    *  
    * @param imdbId Movie identifier.
-   * @throws Exception on failure to remove movie.
+   * @return Returns true when entity actually existed.
    */
-  public void removeById(@NotNull String imdbId) throws Exception {
-    try {
-      Optional<Movie> optionalMovie = findById(imdbId);
-      
-      if (optionalMovie.isPresent()) {
-        Movie movie = optionalMovie.get();
-        movie.getActors().forEach(actor -> {
-          actor.getMovies().remove(movie);
-        });
-        em.remove(movie);
-      }
-    } catch (Exception e) {
-      throw new Exception(" Failed to remove movie with imdbId {" 
-          + imdbId + "}. Refresh movie set and check parameter imdbid.",
-          e.getCause());
+  public boolean removeById(String imdbId) {
+    Optional<Movie> optionalMovie = findById(imdbId);
+    
+    if (optionalMovie.isPresent()) {
+      Movie movie = optionalMovie.get();
+      movie.getActors().forEach(actor -> {
+        actor.getMovies().remove(movie);
+      });
+      em.remove(movie);
+      return true;
     }
+    
+    return false;
   }
   
   /**
-   * Removes an image from a movie and database.
+   * Saves a movie image.
+   * 
+   * @param imdbId Movie identifier.
+   * @param image Image to be added.
+   * @return image.
+   */
+  public Image saveMovieImage(String imdbId, Image image) {
+    Optional<Movie> optionalMovie = findById(imdbId);
+    Movie retrievedMovie = optionalMovie.get();
+    
+    retrievedMovie.getImages().add(image);
+    
+    em.flush();
+    
+    return image;
+  }
+
+  /**
+   * Find an image in movie.
    * 
    * @param imdbId Movie identifier.
    * @param id Image identifier.
-   * @throws Exception on failure to remove image.
    */
-  public void removeMovieImageById(@NotNull String imdbId, @NotNull Long id) throws Exception {
-    try {
-      
-      Optional<Movie> optionalMovie = findWithImagesById(imdbId);
-      if (optionalMovie.isEmpty()) {
-        throw new Exception("Movie with id {" + imdbId + "} could not be retreieved.");      
-      }
-      Movie retrievedMovie = optionalMovie.get();
-      
-      Set<Image> retrievedImages = retrievedMovie.getImages();
-      
-      Iterator<Image> iterator =  retrievedMovie.getImages().iterator();
-      while (iterator.hasNext()) {
-        Image image = (Image) iterator.next();
-        if (image.getId() == id) {
-          retrievedImages.remove(image);
-          return;
-        }
-      }
-    } catch (Exception e) {
-      throw new Exception(" Failed to remove image with id {" + id + "} from movie with imdbId {" 
-          + imdbId + "}. Refresh movie image set and check for parameters imdbId and id.",
-          e.getCause());
+  public Optional<Image> findMovieImageById(String imdbId, Long id) {
+    
+    Optional<Movie> optionalMovie = findById(imdbId);
+    
+    if (optionalMovie.isEmpty()) {
+      return Optional.empty();
     }
+    
+    Movie retrievedMovie = optionalMovie.get();
+    
+    Iterator<Image> iterator =  retrievedMovie.getImages().iterator();
+    while (iterator.hasNext()) {
+      Image image = (Image) iterator.next();
+      if (image.getId().equals(id)) {
+        return Optional.of(image);
+      }
+    }
+    
+    return Optional.empty();
+  }
+  
+  /**
+   * Removes an image from a movie.
+   * Operation is idempotent.
+   * 
+   * <p>Movie persistence must be checked by caller.
+   * 
+   * @param imdbId Movie identifier.
+   * @param id Image identifier.
+   * @return Returns true when entity actually existed.
+   */
+  public boolean removeMovieImageById(String imdbId, Long id) {
+    
+    Optional<Movie> optionalMovie = findById(imdbId);
+    Movie retrievedMovie = optionalMovie.get();
+    
+    Set<Image> retrievedImages = retrievedMovie.getImages();
+    
+    Iterator<Image> iterator =  retrievedMovie.getImages().iterator();
+    while (iterator.hasNext()) {
+      Image image = (Image) iterator.next();
+      if (image.getId().equals(id)) {
+        retrievedImages.remove(image);
+        em.remove(image);
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Counts all movies.
+   * 
+   * @return Number of all movies.
+   */
+  public long count() {
+    TypedQuery<Long> q = em.createQuery("  SELECT COUNT(m) from Movie m", Long.class);
+    
+    return q.getSingleResult();
+  }
+
+  /**
+   * Counts movies containing search string.
+   * 
+   * @param searchFor Search string from Title.
+   * @return Number of filtered movies.
+   */
+  public long countByTitle(String searchFor) {
+    TypedQuery<Long> q = em.createQuery(
+        "  SELECT COUNT(m) from Movie m "
+        + "WHERE m.title LIKE :likeString", 
+        Long.class);
+    q.setParameter("likeString","%" + searchFor + "%");
+
+    return q.getSingleResult();
+  }
+
+  /**
+   * Counts all images for a movie. 
+   * 
+   * @param imdbId Movie identifier.
+   * @return Number of images for a movie.
+   */
+  public long countMovieImages(@NotNull String imdbId) {
+    TypedQuery<Long> q = em.createQuery(
+        "  SELECT COUNT(i) FROM Movie m "
+        + "JOIN m.images i "
+        + "WHERE m.imdbId = :imdbId", 
+        Long.class);
+    q.setParameter("imdbId", imdbId);
+    
+    return q.getSingleResult();
   }
   
 }

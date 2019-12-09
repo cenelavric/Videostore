@@ -242,6 +242,7 @@
 						</lifecycleMappingMetadata>
 					</configuration>
 				</plugin>
+				
 			</plugins>
 		</pluginManagement>
 	</build>
@@ -402,12 +403,45 @@
 			<version>${jaxb.api.version}</version>
 		</dependency>
 
+	    <dependency>
+		    <groupId>com.fasterxml.jackson.core</groupId>
+		    <artifactId>jackson-annotations</artifactId>
+		    <scope>provided</scope>
+	    </dependency>
+
+		<!-- This supports RESTEasy upload of image files -->
+	    <dependency>
+		    <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-multipart-provider</artifactId>
+            <scope>provided</scope>
+	    </dependency>	    
+	    
+		<!-- This provides JSON ObjectMapper -->
+	    <dependency>
+	        <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+	    </dependency>	    
+
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<version>1.18.10</version>
 		</dependency>
-
+		
+		<dependency>
+            <groupId>org.jboss.spec.javax.servlet</groupId>
+            <artifactId>jboss-servlet-api_4.0_spec</artifactId>
+            <scope>provided</scope>
+        </dependency>
+		
+		<!-- support JSR-310 (Java 8 Date & Time API) data types -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.10.1</version>
+		</dependency>
+		
 	</dependencies>
 
 	<profiles>

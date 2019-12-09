@@ -1,0 +1,168 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	template="/WEB-INF/templates/default.xhtml">
+	<ui:define name="content">
+	
+        <!-- Section for Actor details -->
+        
+        <h:form id="frmActorDetails"> 
+
+			<!-- Refreshing detail -->
+            <f:event type="preRenderView" listener="#{actorModel.refresh}"/>	
+                
+            <h:panelGrid columns="3">
+                <h:outputLabel for="id" value="Id:"
+                     style="white-space: nowrap;" />
+                <h:inputText id="id" value="#{actorModel.id}"/>
+                <h:message for="id" errorClass="errorMessageStyle" />
+                
+                <h:outputLabel for="firstName" value="First name:"
+                     style="white-space: nowrap;" />
+                <h:inputText id="firstName" value="#{actorModel.firstName}"/>
+                <h:message for="firstName" errorClass="errorMessageStyle" />
+
+                <h:outputLabel for="lastName" value="Last name:"
+                     style="white-space: nowrap;" />
+                <h:inputText id="lastName" value="#{actorModel.lastName}"/>
+                <h:message for="lastName" errorClass="errorMessageStyle" />
+
+                <h:outputLabel for="bornDate" value="Date of birth:" 
+                     style="white-space: nowrap;"/>
+                <h:inputText id="bornDate"
+                    value="#{actorModel.bornDate}">
+                    <f:convertDateTime type="localDate"/>
+                    </h:inputText>
+                <h:message for="bornDate" errorClass="errorMessageStyle" />
+            </h:panelGrid>
+
+            <h:panelGrid columns="5">
+                <h:commandButton id="load"
+                    action="#{actorModel.load}"
+                    value="Load" />
+
+                <h:commandButton id="registerMovie"
+                    action="#{actorModel.registerActor}"
+                    value="Register" />
+
+                <h:commandButton id="updateMovie"
+                    action="#{actorModel.updateActor}"
+                    value="Update"/>
+                        
+                <h:commandButton id="removeMovie"
+                    action="#{actorModel.removeActor()}"
+                        value="Remove" />
+                        
+                <h:commandButton id="clearForm"
+                    action="#{actorModel.clear}"
+                    value="Clear">
+                        <f:ajax execute="@form" render="frmActorDetails pgActorMovies" />
+                    </h:commandButton>
+            </h:panelGrid>
+                       
+        </h:form>
+           
+        <!-- Messages -->
+ 		<h:form id="frmActorMessages" styleClass="messageBox">
+           <h:messages styleClass="messages"
+               errorClass="errorMessageStyle" infoClass="infoMessageStyle"
+               warnClass="warningMessageStyle" globalOnly="true" tooltip="true"/>
+        </h:form>      
+
+        <hr /> 
+        
+        <!-- Section for Movie Cast Candidates -->
+        
+        <!--Data table without paginator -->
+		<h:panelGroup id="pgMovieCastCandidates">   
+			<h:form id="frmMovieCastCandidateList" rendered="#{movieCastCandidateTableModel.recordCount gt 0}">
+		        <p>Movie cast candidates:</p>         
+			
+ 			    <!-- Refreshing data table -->
+                <f:event type="preRenderView" listener="#{movieCastCandidateTableModel.refresh()}"/>	
+                
+                <!-- Table definition -->                	
+				<h:dataTable id="movieCastCandidatesTable" var="item" value="#{movieCastCandidateTableModel.data}" styleClass="simpletablestyle">
+					<h:column>
+						<f:facet name="header">Id</f:facet>#{item.imdbId}</h:column>
+					<h:column>
+						<f:facet name="header">Title</f:facet>#{item.title}</h:column>
+					<h:column>
+						<f:facet name="header">Year</f:facet>#{item.year}</h:column>
+					<h:column>
+						<f:facet name="header">Description</f:facet>#{item.description}</h:column>
+					<h:column>
+						<f:facet name="header"></f:facet>
+						<h:commandButton value="Remove" action="#{movieCastCandidateTableModel.removeSelected()}" />
+						</h:column>
+					<h:column>
+						<f:facet name="header"></f:facet>
+						<h:commandButton value="Apply cast" action="#{castModel.registerCast(movieCastCandidateTableModel.getData().getRowData().imdbId, actorModel.id)}" />
+						</h:column>
+				</h:dataTable>
+				
+				<h:outputFormat value="Total number of retrieved records : {0}.">
+                    <f:param value="#{movieCastCandidateTableModel.recordCount}" /></h:outputFormat>
+			</h:form>
+			<h:form id="frmNoMovieCastCandidates" rendered="#{movieCastCandidateTableModel.recordCount eq 0}">
+                <h:outputText value="#{movieCastCandidateTableModel.emptyListStatus}"/>
+			</h:form>
+		</h:panelGroup>   
+
+        <hr /> 
+        
+        <!-- Section for Actor Movies -->
+        
+        <!--Data table without paginator -->
+		<h:panelGroup id="pgActorMovies">   
+			<h:form id="frmActorMoviesList" rendered="#{actorMovieTableModel.recordCount gt 0}">
+		        <p>Actor movies:</p>         
+			
+			    <!-- Refreshing data table -->
+                <f:event type="preRenderView" listener="#{actorMovieTableModel.refresh(actorModel.actor.id)}"/>	
+                
+                <!-- Table definition -->                	
+				<h:dataTable id="actorMoviesTable" var="item" value="#{actorMovieTableModel.data}" styleClass="simpletablestyle">
+					<h:column>
+						<f:facet name="header">Id</f:facet>#{item.imdbId}</h:column>
+					<h:column>
+						<f:facet name="header">Title</f:facet>#{item.title}</h:column>
+					<h:column>
+						<f:facet name="header">Year</f:facet>#{item.year}</h:column>
+					<h:column>
+						<f:facet name="header">Description</f:facet>#{item.description}</h:column>
+					<h:column>
+						<f:facet name="header"></f:facet>
+						<h:commandButton value="Details" action="movie-details" actionListener="#{movieModel.setMovie(actorMovieTableModel.getData().getRowData())}"/>
+						</h:column>
+					<h:column>
+						<f:facet name="header"></f:facet>
+						<h:commandButton value="Remove cast" action="#{castModel.removeCast(actorMovieTableModel.getData().getRowData().imdbId, actorMovieTableModel.id)}" />
+						</h:column>
+				</h:dataTable>
+				
+				<h:outputFormat value="Total number of retrieved records : {0}.">
+                    <f:param value="#{actorMovieTableModel.recordCount}" /></h:outputFormat>
+			</h:form>
+			<h:form id="frmNoActorMovies" rendered="#{actorMovieTableModel.recordCount eq 0}">
+                <h:outputText value="#{actorMovieTableModel.emptyListStatus}"/>
+			</h:form>
+		</h:panelGroup>   
+        
+
+        <!-- Websockets channels -->
+		<h:form>
+           <f:websocket channel="actorChannel">
+                <f:ajax event="actorListNotification" render="frmActorDetails pgActorMovies pgMovieCastCandidates frmActorMessages"/>
+           </f:websocket>
+           
+           <f:websocket channel="movieChannel">
+                <f:ajax event="movieListNotification" render="pgActorMovies pgMovieCastCandidates frmActorMessages" />
+           </f:websocket>
+           
+        </h:form>   
+                                          
+	</ui:define>
+</ui:composition>

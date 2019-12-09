@@ -1,0 +1,101 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:ez="http://java.sun.com/jsf/composite/util"
+	xmlns:a="http://xmlns.jcp.org/jsf/passthrough"
+	template="/WEB-INF/templates/default.xhtml">
+	<ui:define name="content">
+
+        <!-- Table text field filter -->
+		<h:form id="frmActorFilter">
+			<h:selectBooleanCheckbox id="chkFilterAppliedToActors" value="#{actorTableModel.nameFilter.chkFilterApplied}" disabled="#{empty actorTableModel.nameFilter.inputFilterSearchFor}">
+				<f:ajax event="change" execute="@this" render="frmActorFilter pgActors" /></h:selectBooleanCheckbox>
+			<h:outputLabel value="#{actorTableModel.nameFilter.query}" style="white-space: nowrap;" />
+			<h:inputText id="inputFilterSearchForActor"	a:placeholder="Enter text then unfocus" value="#{actorTableModel.nameFilter.inputFilterSearchFor}">
+				<f:ajax event="change" execute="@this" render="frmActorFilter pgActors" /></h:inputText>
+		</h:form>
+
+        <!--Data table with paginator -->
+		<h:panelGroup id="pgActors">            
+			<h:form id="frmActorList" rendered="#{actorTableModel.recordCount gt 0}">
+			
+			    <!-- Refreshing data table -->
+                <f:event type="preRenderView" listener="#{actorTableModel.refresh}"/>	
+                
+                <!-- Paginator with table definition -->                	
+				<ez:paginator paginateModel="#{actorTableModel}">
+					<h:dataTable id="actorsTable" var="item" value="#{actorTableModel.data}" styleClass="simpletablestyle">
+						<h:column>
+							<f:facet name="header">Id</f:facet>#{item.id}</h:column>
+						<h:column>
+							<f:facet name="header">First name</f:facet>#{item.firstName}</h:column>
+						<h:column>
+							<f:facet name="header">Last name</f:facet>#{item.lastName.orElse("")}</h:column>
+						<h:column>
+							<f:facet name="header">Date of birth</f:facet>#{item.bornDate}</h:column>
+						<h:column>
+							<f:facet name="header"></f:facet>
+							<h:commandButton value="Details" action="actor-details" actionListener="#{actorModel.setActor(actorTableModel.getData().getRowData())}"/>
+							</h:column>
+						<h:column>
+							<f:facet name="header"></f:facet>
+							<h:commandButton value="CastCandidate" action="#{actorCastCandidateTableModel.add(actorTableModel.getData().getRowData())}" />
+							</h:column>
+						<h:column>
+							<f:facet name="header"></f:facet>
+							<h:commandButton value="Remove"	action="#{actorModel.removeSelectedActor(actorTableModel.getData().getRowData().id)}"/>
+							</h:column>
+					</h:dataTable>
+				</ez:paginator>
+			</h:form>
+			<h:panelGroup id="frmNoActors" rendered="#{actorTableModel.recordCount eq 0}">
+                <h:outputText value="#{actorTableModel.emptyListStatus}"/>
+			</h:panelGroup>
+		</h:panelGroup>   
+        <hr /> 
+        
+        <!-- Section for Actor Cast Candidates -->
+        
+        <!--Data table without paginator -->
+		<h:panelGroup id="pgActorCastCandidates">   
+			<h:form id="frmActorCastCandidateList" rendered="#{actorCastCandidateTableModel.recordCount gt 0}">
+		        <p>Actor cast candidates:</p>         
+			
+ 			    <!-- Refreshing data table -->
+                <f:event type="preRenderView" listener="#{actorCastCandidateTableModel.refresh()}"/>	
+                
+                <!-- Table definition -->                	
+				<h:dataTable id="actorCastCandidatesTable" var="item" value="#{actorCastCandidateTableModel.data}" styleClass="simpletablestyle">
+					<h:column>
+						<f:facet name="header">Id</f:facet>#{item.id}</h:column>
+					<h:column>
+						<f:facet name="header">First name</f:facet>#{item.firstName}</h:column>
+					<h:column>
+						<f:facet name="header">Last name</f:facet>#{item.lastName.orElse("")}</h:column>
+					<h:column>
+						<f:facet name="header">Date of birth</f:facet>#{item.bornDate}</h:column>
+					<h:column>
+						<f:facet name="header"></f:facet>
+						<h:commandButton value="Remove" action="#{actorCastCandidateTableModel.removeSelected()}" />
+						</h:column>
+				</h:dataTable>
+				
+				<h:outputFormat value="Total number of retrieved records : {0}.">
+                    <f:param value="#{actorCastCandidateTableModel.recordCount}" /></h:outputFormat>
+			</h:form>
+			<h:form id="frmNoMovieCastCandidates" rendered="#{actorCastCandidateTableModel.recordCount eq 0}">
+                <h:outputText value="#{actorCastCandidateTableModel.emptyListStatus}"/>
+			</h:form>
+		</h:panelGroup>   
+
+        <!-- Websockets channel -->
+		<h:form id="frmActorsSocket">
+           <f:websocket channel="actorChannel">
+                <f:ajax event="actorListNotification" render="pgActors pgActorCastCandidates" />
+           </f:websocket>
+        </h:form>      
+             
+	</ui:define>
+</ui:composition>

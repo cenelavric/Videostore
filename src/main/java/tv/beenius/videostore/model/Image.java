@@ -20,9 +20,8 @@ import javax.validation.constraints.NotNull;
  * Reference: https://en.wikibooks.org/wiki/Java_Persistence/OneToMany
  *
  */
-@Entity
-
 @SuppressWarnings("serial")
+@Entity
 public class Image implements Serializable {
 
   @Id
@@ -34,6 +33,7 @@ public class Image implements Serializable {
   private String description;
   
   @Lob
+  @NotNull
   private byte[] content;
 
   public Image() {
@@ -66,9 +66,14 @@ public class Image implements Serializable {
 
   @Override
   public String toString() {
-    return "Image {" + "id=" + id 
-        + ", description='" + description + '\''
-        + '}';
+    StringBuilder sb = new StringBuilder();
+    
+    sb.append("Image {")
+      .append("id='").append(id).append('\'')
+      .append(", description='").append(description).append('\'')
+      .append("}");
+    
+    return sb.toString();
   }
 
 }

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:ui="http://java.sun.com/jsf/facelets">
+<body>
+	<ui:composition>
+		<ul>
+			<li class="#{view.viewId == '/index.xhtml' ? 'active' : 'menu'}">
+			    <a href="index.jsf">Home</a></li>
+			<li class="#{view.viewId == '/actor-list.xhtml' ? 'active' : 'menu'}">
+			    <a href="actor-list.jsf">Actor-List</a></li>
+			<li class="#{view.viewId == '/movie-list.xhtml' ? 'active' : 'menu'}">
+			    <a href="movie-list.jsf">Movie-List</a></li>
+			<li class="#{view.viewId == '/actor-details.xhtml' ? 'active' : 'menu'}">
+			    <a href="actor-details.jsf">Actor-Details</a></li>
+			<li class="#{view.viewId == '/movie-details.xhtml' ? 'active' : 'menu'}">
+			    <a href="movie-details.jsf">Movie-Details</a></li>
+			<li class="#{view.viewId == '/image.xhtml' ? 'active' : 'menu'}">
+			    <a href="image.jsf">Image</a></li>
+		</ul>
+	</ui:composition>
+</body>
+</html>
+

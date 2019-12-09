@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:cc="http://java.sun.com/jsf/composite"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core">
+ 
+    <!-- INTERFACE -->
+    <cc:interface>
+        <cc:attribute name="paginateModel" />
+    </cc:interface>
+ 
+    <!-- IMPLEMENTATION -->
+    <cc:implementation>
+
+        <h:inputHidden value="#{cc.attrs.paginateModel.sortField}" />
+        <h:inputHidden value="#{cc.attrs.paginateModel.ascending}" />
+        <h:inputHidden value="#{cc.attrs.paginateModel.page}" />
+ 
+        <h:panelGrid columns="2" cellpadding="1" cellspacing="1">
+            <h:outputLabel value="Rows-per-page" />
+            <h:selectOneRadio value="#{cc.attrs.paginateModel.rowsPerPage}">
+                <f:selectItem itemValue="5" itemLabel="5" />
+                <f:selectItem itemValue="10" itemLabel="10" />
+                <f:selectItem itemValue="20" itemLabel="20" />
+                <f:selectItem itemValue="100" itemLabel="100" />
+                <f:ajax event="change" execute="@form" render="@form" listener="#{cc.attrs.paginateModel.updateRowsPerPage}" />
+            </h:selectOneRadio>
+        </h:panelGrid>
+ 
+        <!-- pagination -->
+        <h:panelGrid columns="3" cellpadding="1" cellspacing="1">
+
+            <h:commandLink value="&lt;&lt;" actionListener="#{cc.attrs.paginateModel.navigatePage(false)}" style="display: #{cc.attrs.paginateModel.page gt 1 ? 'block' : 'none'}">
+                <f:ajax execute="@form" render="@form" />
+            </h:commandLink>
+
+            <h:outputLabel value="#{cc.attrs.paginateModel.page} &frasl; #{cc.attrs.paginateModel.totalPages} " />
+
+            <h:commandLink value="&gt;&gt;" actionListener="#{cc.attrs.paginateModel.navigatePage(true)}" style="display: #{cc.attrs.paginateModel.page lt cc.attrs.paginateModel.totalPages ? 'block' : 'none'}">
+                <f:ajax execute="@form" render="@form" />
+            </h:commandLink>
+        </h:panelGrid>
+        <cc:insertChildren />
+        <br />
+
+        <h:outputFormat value="Total number of retrieved records : {0}.">
+            <f:param value="#{cc.attrs.paginateModel.recordCount}" />
+        </h:outputFormat>
+    </cc:implementation>
+</html>

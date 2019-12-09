@@ -1,8 +1,12 @@
 package tv.beenius.videostore.model;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -18,14 +22,16 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * Entity implementation class for Movie.
  *
  */
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "imdbId")
 @Entity
-
 @SuppressWarnings("serial")
+@XmlRootElement
 public class Movie implements Serializable {
 
   @Id
@@ -37,6 +43,7 @@ public class Movie implements Serializable {
 
   @NotNull
   @Size(min = 1, max = 600)
+  @Column(columnDefinition = "VARCHAR_IGNORECASE(600)")
   private String title;
 
   @NotNull
@@ -53,7 +60,8 @@ public class Movie implements Serializable {
       inverseJoinColumns = {@JoinColumn(name = "ACTOR_ID") })
   private Set<Actor> actors = new HashSet<>();
 
-  @OneToMany(cascade = CascadeType.ALL)
+  @JsonIgnore
+  @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
   @JoinTable(name = "MOVIE_IMAGE", joinColumns = {
       @JoinColumn(name = "IMDB_ID", referencedColumnName = "IMDB_ID") }, inverseJoinColumns = {
           @JoinColumn(name = "IMAGE_ID", referencedColumnName = "ID", unique = true) })
@@ -61,6 +69,22 @@ public class Movie implements Serializable {
 
   public Movie() {
     super();
+  }
+  
+  /**
+   * Intended to enforce lazy entity retrieval.
+   * 
+   * @param imdbId Movie IMDB identifier.
+   * @param title Movie title.
+   * @param year Movie year.
+   * @param description Movie description.
+   */
+  public Movie(String imdbId, String title, Integer year, String description) {
+    super();
+    this.imdbId = imdbId;
+    this.title = title;
+    this.year = year;
+    this.description = description;
   }
 
   public String getImdbId() {
@@ -111,11 +135,55 @@ public class Movie implements Serializable {
     this.images = images;
   }
 
+  /**
+   *  Movie w/o actors toString().
+   * @return movie string.
+   */
   @Override
   public String toString() {
-    return "Movie {" + "imdbId=" + imdbId 
-        + ", title='" + title + '\'' 
-        + '}';
+    StringBuilder sb = new StringBuilder();
+    
+    sb.append("Movie {")
+      .append("imdbId='").append(imdbId).append('\'')
+      .append(", title='").append(title).append('\'')
+      .append(", ").append(actorsToString())
+      .append("}");
+    
+    return sb.toString();
+  }
+  
+  /**
+   * Set of actors toString().
+   * @return actors string.
+   */
+  private String actorsToString() {
+    
+    StringBuilder sb = new StringBuilder();
+    
+    sb.append("actors={");
+    
+    if (actors.size() == 0) {
+      return sb.append("}").toString();
+    } else {
+      sb.append(actors.stream().map(Actor::toStringLazily).collect(Collectors.joining(" ")));  
+      sb.append("}");   
+      return sb.toString();
+    }
+  }
+
+  /**
+   *  Movie w/o actors toString().
+   * @return movie string.
+   */
+  public String toStringLazily() {
+    StringBuilder sb = new StringBuilder();
+    
+    sb.append("Movie {")
+      .append("imdbId='").append(imdbId).append('\'')
+      .append(", title='").append(title).append('\'')
+      .append("}");
+    
+    return sb.toString();
   }
 
 }

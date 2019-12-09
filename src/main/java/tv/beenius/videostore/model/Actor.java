@@ -1,10 +1,20 @@
 package tv.beenius.videostore.model;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
+
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -14,13 +24,14 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.ManyToMany;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.PastOrPresent;
 
 /**
  * Entity implementation class for Actor.
  *
  */
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @Entity
-
 @SuppressWarnings("serial")
 public class Actor implements Serializable {
 
@@ -30,13 +41,17 @@ public class Actor implements Serializable {
   private Long id;
 
   @NotNull
-  @Column(name = "FIRST_NAME")
+  @Column(name = "FIRST_NAME", columnDefinition = "VARCHAR_IGNORECASE(50)")
   private String firstName;
 
-  @Column(name = "LAST_NAME")
+  @JsonProperty("lastName")
+  @Column(name = "LAST_NAME", columnDefinition = "VARCHAR_IGNORECASE(50)")
   private String lastName;
-
+ 
+  @JsonDeserialize(using = LocalDateDeserializer.class)  
+  @JsonSerialize(using = LocalDateSerializer.class)
   @NotNull
+  @PastOrPresent
   @Column(name = "BORN_DATE")
   private LocalDate bornDate;
 
@@ -45,6 +60,22 @@ public class Actor implements Serializable {
 
   public Actor() {
     super();
+  }
+
+  /**
+   * Intended to enforce lazy entity retrieval.
+   * 
+   * @param id Actor identifier.
+   * @param firstName First name.
+   * @param lastName Last name.
+   * @param bornDate Date of birth.
+   */
+  public Actor(Long id, String firstName, String lastName, LocalDate bornDate) {
+    super();
+    this.id = id;
+    this.firstName = firstName;
+    this.lastName = lastName;
+    this.bornDate = bornDate;
   }
 
   public Long getId() {
@@ -66,6 +97,7 @@ public class Actor implements Serializable {
   /**
    * Optional supports mononymous (w/o last name) celebrities.
    */
+  @JsonIgnore
   public Optional<String> getLastName() {
     return Optional.ofNullable(this.lastName);
   }
@@ -97,12 +129,57 @@ public class Actor implements Serializable {
     movie.getActors().add(this);
   }
 
+  /**
+   *  Actor with movies toString().
+   * @return actor string.
+   */
   @Override
   public String toString() {
-    return "Actor {" + "id=" + id 
-        + ", firstName='" + firstName + '\'' 
-        + ", lastName='" + lastName + '\'' 
-        + '}';
+    StringBuilder sb = new StringBuilder();
+    
+    sb.append("Actor {")
+      .append("id='").append(id).append('\'')
+      .append(", firstName='").append(firstName).append('\'')
+      .append(", lastName='").append(lastName).append('\'')
+      .append(", ").append(moviesToString())
+      .append("}");
+    
+    return sb.toString();
+  }
+    
+  /**
+   * Set of movies toString().
+   * @return movies string.
+   */
+  private String moviesToString() {
+    
+    StringBuilder sb = new StringBuilder();
+    
+    sb.append("movies={");
+    
+    if (movies.size() == 0) {
+      return sb.append("}").toString();
+    } else {
+      sb.append(movies.stream().map(Movie::toStringLazily).collect(Collectors.joining(" ")));  
+      sb.append("}");   
+      return sb.toString();
+    }
+  }
+  
+  /**
+   *  Actor w/o movies toString().
+   * @return actor string.
+   */
+  public String toStringLazily() {
+    StringBuilder sb = new StringBuilder();
+    
+    sb.append("Actor {")
+      .append("id='").append(id).append('\'')
+      .append(", firstName='").append(firstName).append('\'')
+      .append(", lastName='").append(lastName).append('\'')
+      .append("}");
+    
+    return sb.toString();
   }
 
 }
